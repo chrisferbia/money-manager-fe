@@ -9,7 +9,7 @@ type Transaction = { id: number; type: EntryType; account_id: number; category_i
 type ReportItem = { id: number; name: string; total: number };
 type EntryForm = { type: EntryType; accountId: string; destinationId: string; categoryId: string; amount: string; description: string; date: string };
 
-const API_BASE = (import.meta.env.VITE_API_URL ?? "/api").replace(/\/$/, "");
+const API_BASE = (import.meta.env.VITE_API_URL ?? "https://money-manager-be.azamines.workers.dev").replace(/\/$/, "");
 const accountTypes = ["cash", "bank", "savings", "debit_card", "credit_card", "e_wallet", "investment", "loan", "mortgage"];
 const today = () => new Date().toISOString().slice(0, 10);
 
