@@ -1,66 +1,119 @@
-// src/App.tsx
-
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
-import cloudflareLogo from "./assets/Cloudflare_Logo.svg";
-import honoLogo from "./assets/hono.svg";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import "./App.css";
 
-function App() {
-	const [count, setCount] = useState(0);
-	const [name, setName] = useState("unknown");
+type View = "dashboard" | "transactions" | "accounts" | "categories" | "reports";
+type EntryType = "income" | "expense" | "transfer";
+type Account = { id: number; name: string; type: string; created_at: string; balance?: number };
+type Category = { id: number; name: string; type: "income" | "expense"; created_at: string };
+type Transaction = { id: number; type: EntryType; account_id: number; category_id: number | null; related_account_id: number | null; amount: number; description: string | null; occurred_at: string; created_at: string };
+type ReportItem = { id: number; name: string; total: number };
+type EntryForm = { type: EntryType; accountId: string; destinationId: string; categoryId: string; amount: string; description: string; date: string };
 
-	return (
-		<>
-			<div>
-				<a href="https://vite.dev" target="_blank">
-					<img src={viteLogo} className="logo" alt="Vite logo" />
-				</a>
-				<a href="https://react.dev" target="_blank">
-					<img src={reactLogo} className="logo react" alt="React logo" />
-				</a>
-				<a href="https://hono.dev/" target="_blank">
-					<img src={honoLogo} className="logo cloudflare" alt="Hono logo" />
-				</a>
-				<a href="https://workers.cloudflare.com/" target="_blank">
-					<img
-						src={cloudflareLogo}
-						className="logo cloudflare"
-						alt="Cloudflare logo"
-					/>
-				</a>
-			</div>
-			<h1>Vite + React + Hono + Cloudflare</h1>
-			<div className="card">
-				<button
-					onClick={() => setCount((count) => count + 1)}
-					aria-label="increment"
-				>
-					count is {count}
-				</button>
-				<p>
-					Edit <code>src/App.tsx</code> and save to test HMR
-				</p>
-			</div>
-			<div className="card">
-				<button
-					onClick={() => {
-						fetch("/api/")
-							.then((res) => res.json() as Promise<{ name: string }>)
-							.then((data) => setName(data.name));
-					}}
-					aria-label="get name"
-				>
-					Name from API is: {name}
-				</button>
-				<p>
-					Edit <code>worker/index.ts</code> to change the name
-				</p>
-			</div>
-			<p className="read-the-docs">Click on the logos to learn more</p>
-		</>
-	);
+const API_BASE = (import.meta.env.VITE_API_URL ?? "/api").replace(/\/$/, "");
+const accountTypes = ["cash", "bank", "savings", "debit_card", "credit_card", "e_wallet", "investment", "loan", "mortgage"];
+const today = () => new Date().toISOString().slice(0, 10);
+
+async function request<T>(path: string, options?: RequestInit): Promise<T> {
+	const response = await fetch(`${API_BASE}${path}`, { headers: { "Content-Type": "application/json", ...options?.headers }, ...options });
+	if (!response.ok) { const body = await response.json().catch(() => null) as { detail?: string } | null; throw new Error(body?.detail || `Request failed (${response.status})`); }
+	return response.status === 204 ? undefined as T : response.json() as Promise<T>;
 }
+
+const blankEntry = (accountId = ""): EntryForm => ({ type: "expense", accountId, destinationId: "", categoryId: "", amount: "", description: "", date: today() });
+const money = (cents: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
+const dateValue = (iso: string) => iso ? iso.slice(0, 10) : today();
+
+function App() {
+	const [view, setView] = useState<View>("dashboard");
+	const [accounts, setAccounts] = useState<Account[]>([]);
+	const [categories, setCategories] = useState<Category[]>([]);
+	const [transactions, setTransactions] = useState<Transaction[]>([]);
+	const [report, setReport] = useState<ReportItem[]>([]);
+	const [accountFilter, setAccountFilter] = useState("");
+	const [typeFilter, setTypeFilter] = useState("");
+	const [categoryFilter, setCategoryFilter] = useState("");
+	const [fromDate, setFromDate] = useState("");
+	const [toDate, setToDate] = useState("");
+	const [entry, setEntry] = useState<EntryForm>(blankEntry());
+	const [editing, setEditing] = useState<Transaction | null>(null);
+	const [accountDraft, setAccountDraft] = useState({ name: "", type: "cash" });
+	const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+	const [categoryDraft, setCategoryDraft] = useState({ name: "", type: "expense" as "income" | "expense" });
+	const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+	const [error, setError] = useState("");
+	const [loading, setLoading] = useState(true);
+	const [saving, setSaving] = useState(false);
+
+	const accountNames = useMemo(() => new Map(accounts.map((item) => [item.id, item.name])), [accounts]);
+	const categoryNames = useMemo(() => new Map(categories.map((item) => [item.id, item.name])), [categories]);
+	const expenseCategories = categories.filter((item) => item.type === "expense");
+	const income = transactions.filter((item) => item.type === "income").reduce((sum, item) => sum + item.amount, 0);
+	const expenses = transactions.filter((item) => item.type === "expense").reduce((sum, item) => sum + item.amount, 0);
+	const balance = accounts.reduce((sum, item) => sum + (item.balance ?? 0), 0);
+
+	const refresh = useCallback(async () => {
+		setLoading(true);
+		try {
+			const transactionParams = new URLSearchParams();
+			if (accountFilter) transactionParams.set("account_id", accountFilter);
+			if (categoryFilter) transactionParams.set("category_id", categoryFilter);
+			if (typeFilter) transactionParams.set("type", typeFilter);
+			if (fromDate) transactionParams.set("from", `${fromDate}T00:00:00Z`);
+			if (toDate) transactionParams.set("to", `${toDate}T23:59:59Z`);
+			const reportParams = new URLSearchParams(); if (fromDate) reportParams.set("from", `${fromDate}T00:00:00Z`); if (toDate) reportParams.set("to", `${toDate}T23:59:59Z`);
+			const [accountData, categoryData, transactionData, reportData] = await Promise.all([
+				request<Account[]>("/accounts?include_balance=true"), request<Category[]>("/categories"), request<Transaction[]>(`/transactions?${transactionParams}`), request<ReportItem[]>(`/reports/expenses-by-category?${reportParams}`),
+			]);
+			setAccounts(accountData); setCategories(categoryData); setTransactions(transactionData); setReport(reportData); setError("");
+		} catch (reason) { setError(reason instanceof Error ? reason.message : "Could not connect to the backend."); }
+		finally { setLoading(false); }
+	}, [accountFilter, categoryFilter, fromDate, toDate, typeFilter]);
+
+	useEffect(() => { void refresh(); }, [refresh]);
+
+	function showError(reason: unknown, fallback: string) { setError(reason instanceof Error ? reason.message : fallback); }
+	function selectView(next: View) { setView(next); setError(""); }
+	function resetEntry() { setEditing(null); setEntry(blankEntry(accountFilter)); }
+
+	async function saveEntry(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+		const cents = Math.round(Number(entry.amount) * 100);
+		if (!entry.accountId || !Number.isFinite(cents) || cents <= 0 || !entry.date) return setError("Account, date, and a positive amount are required.");
+		if (entry.type === "expense" && !entry.categoryId) return setError("Expense transactions require a category.");
+		if (entry.type === "transfer" && (!entry.destinationId || entry.destinationId === entry.accountId)) return setError("Choose a different destination account for the transfer.");
+		setSaving(true);
+		try {
+			const payload = { amount: cents, description: entry.description.trim() || null, occurred_at: `${entry.date}T12:00:00Z` };
+			if (editing) await request<Transaction>(`/transactions/${editing.id}`, { method: "PATCH", body: JSON.stringify({ ...payload, ...(editing.type === "expense" ? { category_id: Number(entry.categoryId) } : editing.type === "income" ? { category_id: null } : {}) }) });
+			else if (entry.type === "transfer") await request<Transaction>("/transfers", { method: "POST", body: JSON.stringify({ type: "transfer", account_id: Number(entry.accountId), related_account_id: Number(entry.destinationId), ...payload }) });
+			else await request<Transaction>("/transactions", { method: "POST", body: JSON.stringify({ type: entry.type, account_id: Number(entry.accountId), category_id: entry.type === "expense" ? Number(entry.categoryId) : null, ...payload }) });
+			resetEntry(); setError(""); await refresh();
+		} catch (reason) { showError(reason, "Could not save transaction."); }
+		finally { setSaving(false); }
+	}
+
+	function editTransaction(transaction: Transaction) { setEditing(transaction); setEntry({ type: transaction.type, accountId: String(transaction.account_id), destinationId: transaction.related_account_id ? String(transaction.related_account_id) : "", categoryId: transaction.category_id ? String(transaction.category_id) : "", amount: (transaction.amount / 100).toFixed(2), description: transaction.description ?? "", date: dateValue(transaction.occurred_at) }); setView("transactions"); }
+	async function deleteTransaction(id: number) { if (!window.confirm("Delete this transaction?")) return; try { await request<void>(`/transactions/${id}`, { method: "DELETE" }); await refresh(); } catch (reason) { showError(reason, "Could not delete transaction."); } }
+
+	async function saveAccount(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (!accountDraft.name.trim()) return setError("Account name is required."); setSaving(true); try { if (editingAccount) await request<Account>(`/accounts/${editingAccount.id}`, { method: "PATCH", body: JSON.stringify(accountDraft) }); else await request<Account>("/accounts", { method: "POST", body: JSON.stringify(accountDraft) }); setAccountDraft({ name: "", type: "cash" }); setEditingAccount(null); setError(""); await refresh(); } catch (reason) { showError(reason, "Could not save account."); } finally { setSaving(false); } }
+	async function deleteAccount(id: number) { if (!window.confirm("Delete this account? Accounts with transactions cannot be deleted.")) return; try { await request<void>(`/accounts/${id}`, { method: "DELETE" }); await refresh(); } catch (reason) { showError(reason, "Could not delete account."); } }
+	async function saveCategory(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (!categoryDraft.name.trim()) return setError("Category name is required."); setSaving(true); try { if (editingCategory) await request<Category>(`/categories/${editingCategory.id}`, { method: "PATCH", body: JSON.stringify({ name: categoryDraft.name.trim() }) }); else await request<Category>("/categories", { method: "POST", body: JSON.stringify(categoryDraft) }); setCategoryDraft({ name: "", type: "expense" }); setEditingCategory(null); setError(""); await refresh(); } catch (reason) { showError(reason, "Could not save category."); } finally { setSaving(false); } }
+	async function deleteCategory(id: number) { if (!window.confirm("Delete this category? Categories used by expenses cannot be deleted.")) return; try { await request<void>(`/categories/${id}`, { method: "DELETE" }); await refresh(); } catch (reason) { showError(reason, "Could not delete category."); } }
+
+	const nav = [{ id: "dashboard", label: "Overview" }, { id: "transactions", label: "Transactions" }, { id: "accounts", label: "Accounts" }, { id: "categories", label: "Categories" }, { id: "reports", label: "Reports" }] as const;
+	return <div className="app-shell"><header className="topbar"><div className="brand-mark">$</div><div><p className="eyebrow">PERSONAL FINANCE</p><h1>Money manager</h1></div><span className="local-badge">Connected to API</span></header><nav className="main-nav" aria-label="Main navigation">{nav.map((item) => <button key={item.id} className={view === item.id ? "selected" : ""} onClick={() => selectView(item.id)}>{item.label}</button>)}</nav><main>{error && <div className="api-error" role="alert"><strong>Action failed</strong><span>{error}</span><button onClick={() => setError("")}>Dismiss</button></div>}{loading && <div className="loading-bar">Refreshing data...</div>}{view === "transactions" && <div className="filter-bar"><select value={accountFilter} onChange={(event) => setAccountFilter(event.target.value)}><option value="">All accounts</option>{accounts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}><option value="">All types</option><option value="income">Income</option><option value="expense">Expense</option><option value="transfer">Transfer</option></select><select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}><option value="">All categories</option>{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} aria-label="Transactions from date" /><input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} aria-label="Transactions to date" /><button className="cancel-button" onClick={() => { setAccountFilter(""); setTypeFilter(""); setCategoryFilter(""); setFromDate(""); setToDate(""); }}>Clear</button></div>}{view === "dashboard" && <Dashboard accounts={accounts} accountNames={accountNames} categoryNames={categoryNames} transactions={transactions} report={report} income={income} expenses={expenses} balance={balance} money={money} onNavigate={selectView} />}{view === "transactions" && <Transactions accounts={accounts} transactions={transactions} accountNames={accountNames} categoryNames={categoryNames} entry={entry} setEntry={setEntry} editing={editing} saving={saving} expenseCategories={expenseCategories} onSave={saveEntry} onEdit={editTransaction} onDelete={deleteTransaction} onCancel={resetEntry} />}{view === "accounts" && <Accounts accounts={accounts} money={money} draft={accountDraft} setDraft={setAccountDraft} editing={editingAccount} setEditing={setEditingAccount} saving={saving} onSave={saveAccount} onDelete={deleteAccount} />}{view === "categories" && <Categories categories={categories} draft={categoryDraft} setDraft={setCategoryDraft} editing={editingCategory} setEditing={setEditingCategory} saving={saving} onSave={saveCategory} onDelete={deleteCategory} />}{view === "reports" && <Reports report={report} money={money} fromDate={fromDate} toDate={toDate} setFromDate={setFromDate} setToDate={setToDate} />}</main><footer>Data is managed by your Money Manager backend.</footer></div>;
+}
+
+function Dashboard({ accounts, accountNames, categoryNames, transactions, report, income, expenses, balance, money, onNavigate }: { accounts: Account[]; accountNames: Map<number, string>; categoryNames: Map<number, string>; transactions: Transaction[]; report: ReportItem[]; income: number; expenses: number; balance: number; money: (value: number) => string; onNavigate: (view: View) => void }) { return <><section className="hero"><div><p className="eyebrow">OVERVIEW</p><h2>Your money, made clear.</h2><p className="muted">A live view of every account and transaction in your ledger.</p></div><div className="balance"><span>Total balance</span><strong>{money(balance)}</strong></div></section><section className="stats"><div className="stat-card"><span className="stat-label">Accounts</span><strong>{accounts.length}</strong><small>Tracked accounts</small></div><div className="stat-card"><span className="stat-label">Income</span><strong className="income">{money(income)}</strong><small>In filtered period</small></div><div className="stat-card"><span className="stat-label">Expenses</span><strong className="expense">{money(expenses)}</strong><small>In filtered period</small></div></section><div className="dashboard-grid"><section className="panel"><div className="panel-heading"><div><p className="eyebrow">YOUR ACCOUNTS</p><h3>Balances</h3></div><button className="text-button" onClick={() => onNavigate("accounts")}>Manage</button></div><div className="account-cards">{accounts.map((account) => <div className="account-card" key={account.id}><span>{account.type.replace("_", " ")}</span><strong>{account.name}</strong><b>{money(account.balance ?? 0)}</b></div>)}</div>{accounts.length === 0 && <p className="empty-copy">Create an account to get started.</p>}</section><section className="panel"><div className="panel-heading"><div><p className="eyebrow">REPORT</p><h3>Expenses by category</h3></div><button className="text-button" onClick={() => onNavigate("reports")}>View report</button></div>{report.length ? <div className="category-list">{report.slice(0, 5).map((item) => <div className="category-item" key={item.id}><div className="category-line"><span>{item.name}</span><strong>{money(item.total)}</strong></div><div className="progress-track"><div className="progress-fill" style={{ width: `${(item.total / Math.max(...report.map((value) => value.total))) * 100}%` }} /></div></div>)}</div> : <p className="empty-copy">No expenses in this period.</p>}</section></div><section className="panel transactions-panel"><div className="panel-heading"><div><p className="eyebrow">LATEST</p><h3>Recent activity</h3></div><button className="text-button" onClick={() => onNavigate("transactions")}>All transactions</button></div><TransactionRows transactions={transactions.slice(0, 5)} accountNames={accountNames} categoryNames={categoryNames} money={money} onEdit={() => onNavigate("transactions")} onDelete={() => undefined} /></section></>; }
+
+function TransactionRows({ transactions, accountNames, categoryNames, money, onEdit, onDelete }: { transactions: Transaction[]; accountNames: Map<number, string>; categoryNames: Map<number, string>; money: (value: number) => string; onEdit: (item: Transaction) => void; onDelete: (id: number) => void }) { if (!transactions.length) return <div className="empty-state"><strong>No transactions yet</strong><span>Add an income, expense, or transfer to see activity here.</span></div>; return <div className="transaction-list">{transactions.map((item) => <div className="transaction-row" key={item.id}><div className={`transaction-icon ${item.type}`}>{item.type === "income" ? "↑" : item.type === "expense" ? "↓" : "↔"}</div><div className="transaction-details"><strong>{item.type === "transfer" ? `${accountNames.get(item.account_id)} to ${accountNames.get(item.related_account_id ?? 0)}` : item.category_id ? categoryNames.get(item.category_id) : item.type}</strong><span>{item.description || accountNames.get(item.account_id) || "Transaction"} · {new Date(item.occurred_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span></div><strong className={item.type}>{item.type === "income" ? "+" : item.type === "expense" ? "-" : ""}{money(item.amount)}</strong><button className="delete-button" onClick={() => onEdit(item)} aria-label="Edit transaction">Edit</button><button className="delete-button" onClick={() => onDelete(item.id)} aria-label="Delete transaction">Delete</button></div>)}</div>; }
+
+function Transactions({ accounts, transactions, accountNames, categoryNames, entry, setEntry, editing, saving, expenseCategories, onSave, onEdit, onDelete, onCancel }: { accounts: Account[]; transactions: Transaction[]; accountNames: Map<number, string>; categoryNames: Map<number, string>; entry: EntryForm; setEntry: (value: EntryForm) => void; editing: Transaction | null; saving: boolean; expenseCategories: Category[]; onSave: (event: FormEvent<HTMLFormElement>) => void; onEdit: (item: Transaction) => void; onDelete: (id: number) => void; onCancel: () => void }) { return <><section className="page-heading"><div><p className="eyebrow">LEDGER</p><h2>Transactions</h2><p className="muted">Record, edit, filter, and remove activity across your accounts.</p></div></section><div className="filter-summary">{transactions.length} matching records</div><div className="two-column"><section className="panel"><div className="panel-heading"><div><p className="eyebrow">{editing ? "EDIT ENTRY" : "NEW ENTRY"}</p><h3>{editing ? "Edit transaction" : "Add transaction"}</h3></div></div><form onSubmit={onSave}><div className="type-switch">{(["expense", "income", "transfer"] as EntryType[]).map((kind) => <button key={kind} type="button" className={entry.type === kind ? `active ${kind === "income" ? "income-tab" : kind === "transfer" ? "transfer-tab" : ""}` : ""} disabled={Boolean(editing)} onClick={() => setEntry({ ...entry, type: kind })}>{kind}</button>)}</div><label>Account<select value={entry.accountId} disabled={Boolean(editing)} onChange={(event) => setEntry({ ...entry, accountId: event.target.value })}><option value="">Select account</option>{accounts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>{entry.type === "transfer" && !editing && <label>Destination account<select value={entry.destinationId} onChange={(event) => setEntry({ ...entry, destinationId: event.target.value })}><option value="">Select destination</option>{accounts.filter((item) => String(item.id) !== entry.accountId).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}{entry.type === "expense" && <label>Category<select value={entry.categoryId} onChange={(event) => setEntry({ ...entry, categoryId: event.target.value })}><option value="">Select category</option>{expenseCategories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}<div className="form-row"><label>Amount<input type="number" min="0.01" step="0.01" value={entry.amount} onChange={(event) => setEntry({ ...entry, amount: event.target.value })} placeholder="0.00" /></label><label>Date<input type="date" value={entry.date} onChange={(event) => setEntry({ ...entry, date: event.target.value })} /></label></div><label>Description <span className="optional">(optional)</span><input value={entry.description} onChange={(event) => setEntry({ ...entry, description: event.target.value })} placeholder="What was this for?" /></label><button className="submit-button" disabled={saving}>{saving ? "Saving..." : editing ? "Save changes" : `Add ${entry.type}`} <span>+</span></button>{editing && <button className="cancel-button" type="button" onClick={onCancel}>Cancel editing</button>}</form></section><section className="panel transactions-panel"><div className="panel-heading"><div><p className="eyebrow">HISTORY</p><h3>All transactions</h3></div></div><TransactionRows transactions={transactions} accountNames={accountNames} categoryNames={categoryNames} money={(value) => money(value)} onEdit={onEdit} onDelete={onDelete} /></section></div></>; }
+
+function Accounts({ accounts, money, draft, setDraft, editing, setEditing, saving, onSave, onDelete }: { accounts: Account[]; money: (value: number) => string; draft: { name: string; type: string }; setDraft: (value: { name: string; type: string }) => void; editing: Account | null; setEditing: (value: Account | null) => void; saving: boolean; onSave: (event: FormEvent<HTMLFormElement>) => void; onDelete: (id: number) => void }) { return <><section className="page-heading"><div><p className="eyebrow">REFERENCE DATA</p><h2>Accounts</h2><p className="muted">Manage the places where you keep money.</p></div></section><div className="two-column"><section className="panel"><div className="panel-heading"><div><p className="eyebrow">{editing ? "EDIT ACCOUNT" : "NEW ACCOUNT"}</p><h3>{editing ? "Update account" : "Add account"}</h3></div></div><form onSubmit={onSave}><label>Name<input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Everyday checking" /></label><label>Type<select value={draft.type} onChange={(event) => setDraft({ ...draft, type: event.target.value })}>{accountTypes.map((type) => <option key={type}>{type}</option>)}</select></label><button className="submit-button" disabled={saving}>{editing ? "Save account" : "Add account"}</button>{editing && <button className="cancel-button" type="button" onClick={() => { setEditing(null); setDraft({ name: "", type: "cash" }); }}>Cancel</button>}</form></section><section className="panel"><div className="panel-heading"><div><p className="eyebrow">ACCOUNT LIST</p><h3>{accounts.length} accounts</h3></div></div><div className="managed-list">{accounts.map((account) => <div className="managed-row" key={account.id}><div><strong>{account.name}</strong><span>{account.type.replace("_", " ")}</span></div><b>{money(account.balance ?? 0)}</b><button className="delete-button" onClick={() => { setEditing(account); setDraft({ name: account.name, type: account.type }); }}>Edit</button><button className="delete-button" onClick={() => onDelete(account.id)}>Delete</button></div>)}</div></section></div></>; }
+
+function Categories({ categories, draft, setDraft, editing, setEditing, saving, onSave, onDelete }: { categories: Category[]; draft: { name: string; type: "income" | "expense" }; setDraft: (value: { name: string; type: "income" | "expense" }) => void; editing: Category | null; setEditing: (value: Category | null) => void; saving: boolean; onSave: (event: FormEvent<HTMLFormElement>) => void; onDelete: (id: number) => void }) { return <><section className="page-heading"><div><p className="eyebrow">REFERENCE DATA</p><h2>Categories</h2><p className="muted">Create the labels used to organize income and spending.</p></div></section><div className="two-column"><section className="panel"><div className="panel-heading"><div><p className="eyebrow">{editing ? "EDIT CATEGORY" : "NEW CATEGORY"}</p><h3>{editing ? "Rename category" : "Add category"}</h3></div></div><form onSubmit={onSave}><label>Name<input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Groceries" /></label>{!editing && <label>Type<select value={draft.type} onChange={(event) => setDraft({ ...draft, type: event.target.value as "income" | "expense" })}><option value="expense">expense</option><option value="income">income</option></select></label>}<button className="submit-button" disabled={saving}>{editing ? "Save category" : "Add category"}</button>{editing && <button className="cancel-button" type="button" onClick={() => { setEditing(null); setDraft({ name: "", type: "expense" }); }}>Cancel</button>}</form></section><section className="panel"><div className="panel-heading"><div><p className="eyebrow">CATEGORY LIST</p><h3>{categories.length} categories</h3></div></div><div className="managed-list">{categories.map((category) => <div className="managed-row" key={category.id}><div><strong>{category.name}</strong><span className={`type-pill ${category.type}`}>{category.type}</span></div><button className="delete-button" onClick={() => { setEditing(category); setDraft({ name: category.name, type: category.type }); }}>Edit</button><button className="delete-button" onClick={() => onDelete(category.id)}>Delete</button></div>)}</div></section></div></>; }
+
+function Reports({ report, money, fromDate, toDate, setFromDate, setToDate }: { report: ReportItem[]; money: (value: number) => string; fromDate: string; toDate: string; setFromDate: (value: string) => void; setToDate: (value: string) => void }) { return <><section className="page-heading"><div><p className="eyebrow">ANALYSIS</p><h2>Expense report</h2><p className="muted">See how expenses are distributed across categories.</p></div></section><section className="panel report-panel"><div className="date-filters"><label>From<input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} /></label><label>To<input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} /></label><button className="cancel-button" onClick={() => { setFromDate(""); setToDate(""); }}>Clear dates</button></div>{report.length ? <div className="report-list">{report.map((item) => <div className="report-row" key={item.id}><div><strong>{item.name}</strong><div className="progress-track"><div className="progress-fill" style={{ width: `${(item.total / Math.max(...report.map((value) => value.total))) * 100}%` }} /></div></div><b>{money(item.total)}</b></div>)}</div> : <div className="empty-state"><strong>No matching expenses</strong><span>Try a wider date range or add an expense.</span></div>}</section></>; }
 
 export default App;
