@@ -5,10 +5,14 @@ type TransactionRowContext = {
 	categoryNames: Map<number, string>;
 	money: MoneyFormatter;
 	onEdit: (transaction: Transaction) => void;
-	onDelete: (id: number) => void;
+	onDelete: (transaction: Transaction) => void;
 };
 
-type TransactionRowsProps = TransactionRowContext & { transactions: Transaction[] };
+type TransactionRowsProps = TransactionRowContext & {
+	transactions: Transaction[];
+	emptyTitle?: string;
+	emptyDescription?: string;
+};
 
 export function TransactionRows({
 	transactions,
@@ -17,12 +21,14 @@ export function TransactionRows({
 	money,
 	onEdit,
 	onDelete,
+	emptyTitle = "No transactions yet",
+	emptyDescription = "Add an income, expense, or transfer to see activity here.",
 }: TransactionRowsProps) {
 	if (!transactions.length)
 		return (
 			<div className="empty-state">
-				<strong>No transactions yet</strong>
-				<span>Add an income, expense, or transfer to see activity here.</span>
+				<strong>{emptyTitle}</strong>
+				<span>{emptyDescription}</span>
 			</div>
 		);
 
@@ -66,7 +72,7 @@ function TransactionRow({
 					? "IN"
 					: transaction.type === "expense"
 						? "OUT"
-						: "MOVE"}
+						: "TRF"}
 			</div>
 			<div className="transaction-details">
 				<strong>{label}</strong>
@@ -87,16 +93,18 @@ function TransactionRow({
 				{money(transaction.amount)}
 			</strong>
 			<button
+				type="button"
 				className="edit-button"
 				onClick={() => onEdit(transaction)}
-				aria-label="Edit transaction"
+				aria-label={`Edit ${label}`}
 			>
 				Edit
 			</button>
 			<button
+				type="button"
 				className="delete-button"
-				onClick={() => onDelete(transaction.id)}
-				aria-label="Delete transaction"
+				onClick={() => onDelete(transaction)}
+				aria-label={`Delete ${label}`}
 			>
 				Delete
 			</button>

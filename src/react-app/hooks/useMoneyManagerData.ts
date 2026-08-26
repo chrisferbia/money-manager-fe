@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { request } from "../api/client";
 import type { Account, Category, DashboardFilters, ReportItem, Transaction } from "../types";
 import { errorMessage } from "../utils/errors";
+import { sortTransactions } from "../utils/transactions";
 
 const emptyFilters: DashboardFilters = { account: "", type: "", category: "", from: "", to: "" };
 
@@ -37,7 +38,7 @@ export function useMoneyManagerData() {
 
 			setAccounts(accountData);
 			setCategories(categoryData);
-			setTransactions(transactionData);
+			setTransactions(sortTransactions(transactionData));
 			setReport(reportData);
 			setError("");
 		} catch (reason) {
@@ -46,6 +47,11 @@ export function useMoneyManagerData() {
 			setLoading(false);
 		}
 	}, [filters]);
+
+	const refreshAccounts = useCallback(async () => {
+		const accountData = await request<Account[]>("/accounts?include_balance=true");
+		setAccounts(accountData);
+	}, []);
 
 	useEffect(() => {
 		void refresh();
@@ -62,5 +68,6 @@ export function useMoneyManagerData() {
 		setError,
 		loading,
 		refresh,
+		refreshAccounts,
 	};
 }

@@ -1,4 +1,4 @@
-import type { Dispatch, FormEvent, SetStateAction } from "react";
+import { useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
 import { request } from "../api/client";
 import type {
 	Account,
@@ -11,6 +11,7 @@ import type {
 } from "../types";
 import { errorMessage } from "../utils/errors";
 import { blankEntry } from "../utils/forms";
+import { accountNameMaxLength, accountTypes, categoryNameMaxLength } from "../utils/constants";
 import {
 	createTransactionPayload,
 	createTransferPayload,
@@ -22,6 +23,7 @@ import {
 type ActionDependencies = {
 	filters: DashboardFilters;
 	refresh: () => Promise<void>;
+	refreshAccounts: () => Promise<void>;
 	setError: (message: string) => void;
 	setNotice: (message: string) => void;
 	setSaving: Dispatch<SetStateAction<boolean>>;
@@ -37,6 +39,7 @@ type ActionDependencies = {
 export function useMoneyManagerActions({
 	filters,
 	refresh,
+	refreshAccounts,
 	setError,
 	setNotice,
 	setSaving,
@@ -48,6 +51,9 @@ export function useMoneyManagerActions({
 	setCategoryDraft,
 	setEditingCategory,
 }: ActionDependencies) {
+	const [deletingAccountId, setDeletingAccountId] = useState<number | null>(null);
+	const [deletingCategoryId, setDeletingCategoryId] = useState<number | null>(null);
+
 	function resetEntry() {
 		setEditing(null);
 		setEntry(blankEntry(filters.account));
@@ -97,10 +103,13 @@ export function useMoneyManagerActions({
 		setView("transactions");
 	}
 
-	async function deleteTransaction(id: number) {
-		if (!window.confirm("Delete this transaction?")) return;
+	async function deleteTransaction(transaction: Transaction) {
+		const label =
+			transaction.description?.trim() ||
+			(transaction.type === "transfer" ? "This transfer" : "This transaction");
+		if (!window.confirm(`Delete "${label}"? This cannot be undone.`)) return;
 		try {
-			await request<void>(`/transactions/${id}`, { method: "DELETE" });
+			await request<void>(`/transactions/${transaction.id}`, { method: "DELETE" });
 			setNotice("Transaction deleted.");
 			await refresh();
 		} catch (reason) {
@@ -112,43 +121,65 @@ export function useMoneyManagerActions({
 		event: FormEvent<HTMLFormElement>,
 		draft: { name: string; type: string },
 		editing: Account | null,
-	) {
+	): Promise<boolean> {
 		event.preventDefault();
-		if (!draft.name.trim()) return setError("Account name is required.");
+		const name = draft.name.trim();
+		if (!name) {
+			setError("Account name is required.");
+			return false;
+		}
+		if (name.length > accountNameMaxLength) {
+			setError(`Account name must be ${accountNameMaxLength} characters or fewer.`);
+			return false;
+		}
+		if (!accountTypes.some((type) => type === draft.type)) {
+			setError("Choose a valid account type.");
+			return false;
+		}
 		setSaving(true);
 		try {
 			const wasEditing = Boolean(editing);
+			const payload = { name, type: draft.type };
 			if (editing)
 				await request<Account>(`/accounts/${editing.id}`, {
 					method: "PATCH",
-					body: JSON.stringify(draft),
+					body: JSON.stringify(payload),
 				});
 			else
 				await request<Account>("/accounts", {
 					method: "POST",
-					body: JSON.stringify(draft),
+					body: JSON.stringify(payload),
 				});
 			setAccountDraft({ name: "", type: "cash" });
 			setEditingAccount(null);
 			setError("");
 			setNotice(wasEditing ? "Account updated." : "Account added.");
-			await refresh();
+			await refreshAccounts();
+			return true;
 		} catch (reason) {
 			setError(errorMessage(reason, "Could not save account."));
+			return false;
 		} finally {
 			setSaving(false);
 		}
 	}
 
-	async function deleteAccount(id: number) {
-		if (!window.confirm("Delete this account? Accounts with transactions cannot be deleted."))
+	async function deleteAccount(account: Account) {
+		if (
+			!window.confirm(
+				`Delete "${account.name}"? Accounts with transactions cannot be deleted.`,
+			)
+		)
 			return;
+		setDeletingAccountId(account.id);
 		try {
-			await request<void>(`/accounts/${id}`, { method: "DELETE" });
+			await request<void>(`/accounts/${account.id}`, { method: "DELETE" });
 			setNotice("Account deleted.");
-			await refresh();
+			await refreshAccounts();
 		} catch (reason) {
 			setError(errorMessage(reason, "Could not delete account."));
+		} finally {
+			setDeletingAccountId(null);
 		}
 	}
 
@@ -156,43 +187,60 @@ export function useMoneyManagerActions({
 		event: FormEvent<HTMLFormElement>,
 		draft: CategoryDraft,
 		editing: Category | null,
-	) {
+	): Promise<boolean> {
 		event.preventDefault();
-		if (!draft.name.trim()) return setError("Category name is required.");
+		const name = draft.name.trim();
+		if (!name) {
+			setError("Category name is required.");
+			return false;
+		}
+		if (name.length > categoryNameMaxLength) {
+			setError(`Category name must be ${categoryNameMaxLength} characters or fewer.`);
+			return false;
+		}
 		setSaving(true);
 		try {
 			const wasEditing = Boolean(editing);
 			if (editing)
 				await request<Category>(`/categories/${editing.id}`, {
 					method: "PATCH",
-					body: JSON.stringify({ name: draft.name.trim() }),
+					body: JSON.stringify({ name }),
 				});
 			else
 				await request<Category>("/categories", {
 					method: "POST",
-					body: JSON.stringify(draft),
+					body: JSON.stringify({ name, type: draft.type }),
 				});
 			setCategoryDraft({ name: "", type: "expense" });
 			setEditingCategory(null);
 			setError("");
 			setNotice(wasEditing ? "Category renamed." : "Category added.");
 			await refresh();
+			return true;
 		} catch (reason) {
 			setError(errorMessage(reason, "Could not save category."));
+			return false;
 		} finally {
 			setSaving(false);
 		}
 	}
 
-	async function deleteCategory(id: number) {
-		if (!window.confirm("Delete this category? Categories used by expenses cannot be deleted."))
+	async function deleteCategory(category: Category) {
+		if (
+			!window.confirm(
+				`Delete "${category.name}"? Categories used by expenses cannot be deleted.`,
+			)
+		)
 			return;
+		setDeletingCategoryId(category.id);
 		try {
-			await request<void>(`/categories/${id}`, { method: "DELETE" });
+			await request<void>(`/categories/${category.id}`, { method: "DELETE" });
 			setNotice("Category deleted.");
 			await refresh();
 		} catch (reason) {
 			setError(errorMessage(reason, "Could not delete category."));
+		} finally {
+			setDeletingCategoryId(null);
 		}
 	}
 
@@ -203,7 +251,9 @@ export function useMoneyManagerActions({
 		deleteTransaction,
 		saveAccount,
 		deleteAccount,
+		deletingAccountId,
 		saveCategory,
 		deleteCategory,
+		deletingCategoryId,
 	};
 }

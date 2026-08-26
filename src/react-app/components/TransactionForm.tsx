@@ -8,9 +8,14 @@ type TransactionFormProps = {
 	editing: Transaction | null;
 	saving: boolean;
 	expenseCategories: Category[];
+	incomeCategories: Category[];
 	onSave: (event: FormEvent<HTMLFormElement>) => void;
 	onCancel: () => void;
 };
+
+function entryTypeLabel(type: EntryType) {
+	return type === "expense" ? "Expense" : type === "income" ? "Income" : "Transfer";
+}
 
 export function TransactionForm({
 	accounts,
@@ -19,6 +24,7 @@ export function TransactionForm({
 	editing,
 	saving,
 	expenseCategories,
+	incomeCategories,
 	onSave,
 	onCancel,
 }: TransactionFormProps) {
@@ -27,7 +33,7 @@ export function TransactionForm({
 
 	return (
 		<form onSubmit={onSave}>
-			<div className="type-switch">
+			<div className="type-switch" role="group" aria-label="Transaction type">
 				{(["expense", "income", "transfer"] as EntryType[]).map((kind) => (
 					<button
 						key={kind}
@@ -38,9 +44,10 @@ export function TransactionForm({
 								: ""
 						}
 						disabled={Boolean(editing)}
+						aria-pressed={entry.type === kind}
 						onClick={() => update({ type: kind, categoryId: "", destinationId: "" })}
 					>
-						{kind}
+						{entryTypeLabel(kind)}
 					</button>
 				))}
 			</div>
@@ -49,6 +56,7 @@ export function TransactionForm({
 				<select
 					value={entry.accountId}
 					disabled={Boolean(editing)}
+					required
 					onChange={(event) => update({ accountId: event.target.value })}
 				>
 					<option value="">Select account</option>
@@ -64,6 +72,7 @@ export function TransactionForm({
 					Destination account
 					<select
 						value={entry.destinationId}
+						required
 						onChange={(event) => update({ destinationId: event.target.value })}
 					>
 						<option value="">Select destination</option>
@@ -77,19 +86,25 @@ export function TransactionForm({
 					</select>
 				</label>
 			)}
-			{entry.type === "expense" && (
+			{entry.type !== "transfer" && (
 				<label>
-					Category
+					Category{" "}
+					{entry.type === "income" && <span className="optional">(optional)</span>}
 					<select
 						value={entry.categoryId}
+						required={entry.type === "expense"}
 						onChange={(event) => update({ categoryId: event.target.value })}
 					>
-						<option value="">Select category</option>
-						{expenseCategories.map((item) => (
-							<option key={item.id} value={item.id}>
-								{item.name}
-							</option>
-						))}
+						<option value="">
+							{entry.type === "income" ? "No category" : "Select category"}
+						</option>
+						{(entry.type === "income" ? incomeCategories : expenseCategories).map(
+							(item) => (
+								<option key={item.id} value={item.id}>
+									{item.name}
+								</option>
+							),
+						)}
 					</select>
 				</label>
 			)}
@@ -105,6 +120,8 @@ export function TransactionForm({
 						type="number"
 						min="1"
 						step="1"
+						required
+						inputMode="numeric"
 						value={entry.amount}
 						onChange={(event) => update({ amount: event.target.value })}
 						placeholder="1000"
@@ -115,6 +132,7 @@ export function TransactionForm({
 					<input
 						type="date"
 						value={entry.date}
+						required
 						onChange={(event) => update({ date: event.target.value })}
 					/>
 				</label>
@@ -127,7 +145,7 @@ export function TransactionForm({
 					placeholder="What was this for?"
 				/>
 			</label>
-			<button className="submit-button" disabled={saving}>
+			<button className="submit-button" type="submit" disabled={saving}>
 				{saving ? "Saving..." : editing ? "Save changes" : `Add ${entry.type}`}{" "}
 				<span>+</span>
 			</button>

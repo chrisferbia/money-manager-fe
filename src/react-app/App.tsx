@@ -7,7 +7,6 @@ import { AppShell } from "./components/AppShell";
 import { Dashboard } from "./components/Dashboard";
 import { ReportsView } from "./components/ReportsView";
 import { SettingsView } from "./components/SettingsView";
-import { TransactionFilters } from "./components/TransactionFilters";
 import { TransactionsView } from "./components/TransactionsView";
 import { createMoneyFormatter, persistCurrency, readCurrency } from "./utils/currency";
 import { blankEntry } from "./utils/forms";
@@ -34,6 +33,7 @@ function App() {
 		setError,
 		loading,
 		refresh,
+		refreshAccounts,
 	} = useMoneyManagerData();
 	const [view, setView] = useState<View>("dashboard");
 	const [entry, setEntry] = useState<EntryForm>(blankEntry());
@@ -56,6 +56,7 @@ function App() {
 		[accounts, categories],
 	);
 	const expenseCategories = categories.filter((item) => item.type === "expense");
+	const incomeCategories = categories.filter((item) => item.type === "income");
 	const income = transactions
 		.filter((item) => item.type === "income")
 		.reduce((sum, item) => sum + item.amount, 0);
@@ -67,6 +68,7 @@ function App() {
 	const actions = useMoneyManagerActions({
 		filters,
 		refresh,
+		refreshAccounts,
 		setError,
 		setNotice,
 		setSaving,
@@ -113,40 +115,38 @@ function App() {
 				/>
 			)}
 			{view === "transactions" && (
-				<>
-					<TransactionFilters
-						accounts={accounts}
-						categories={categories}
-						filters={filters}
-						setFilters={setFilters}
-					/>
-					<TransactionsView
-						accounts={accounts}
-						transactions={transactions}
-						accountNames={accountNames}
-						categoryNames={categoryNames}
-						entry={entry}
-						setEntry={setEntry}
-						editing={editing}
-						saving={saving}
-						expenseCategories={expenseCategories}
-						money={money}
-						onSave={(event) => actions.saveEntry(event, entry, editing)}
-						onEdit={actions.editTransaction}
-						onDelete={actions.deleteTransaction}
-						onCancel={actions.resetEntry}
-					/>
-				</>
+				<TransactionsView
+					accounts={accounts}
+					categories={categories}
+					filters={filters}
+					setFilters={setFilters}
+					transactions={transactions}
+					accountNames={accountNames}
+					categoryNames={categoryNames}
+					entry={entry}
+					setEntry={setEntry}
+					editing={editing}
+					saving={saving}
+					expenseCategories={expenseCategories}
+					incomeCategories={incomeCategories}
+					money={money}
+					onSave={(event) => actions.saveEntry(event, entry, editing)}
+					onEdit={actions.editTransaction}
+					onDelete={actions.deleteTransaction}
+					onCancel={actions.resetEntry}
+				/>
 			)}
 			{view === "accounts" && (
 				<AccountsView
 					accounts={accounts}
+					loading={loading}
 					money={money}
 					draft={accountDraft}
 					setDraft={setAccountDraft}
 					editing={editingAccount}
 					setEditing={setEditingAccount}
 					saving={saving}
+					deletingId={actions.deletingAccountId}
 					onSave={(event) => actions.saveAccount(event, accountDraft, editingAccount)}
 					onDelete={actions.deleteAccount}
 				/>
@@ -169,6 +169,7 @@ function App() {
 					editing={editingCategory}
 					setEditing={setEditingCategory}
 					saving={saving}
+					deletingId={actions.deletingCategoryId}
 					onSaveCategory={(event) =>
 						actions.saveCategory(event, categoryDraft, editingCategory)
 					}

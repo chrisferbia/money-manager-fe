@@ -30,7 +30,8 @@ export function createTransactionPayload(entry: EntryForm) {
 	return {
 		type: entry.type,
 		account_id: Number(entry.accountId),
-		category_id: entry.type === "expense" ? Number(entry.categoryId) : null,
+		category_id:
+			entry.type !== "transfer" && entry.categoryId ? Number(entry.categoryId) : null,
 		...commonTransactionPayload(entry),
 	};
 }
@@ -47,12 +48,18 @@ export function createTransferPayload(entry: EntryForm) {
 export function updateTransactionPayload(entry: EntryForm, type: Transaction["type"]) {
 	return {
 		...commonTransactionPayload(entry),
-		...(type === "expense"
-			? { category_id: Number(entry.categoryId) }
-			: type === "income"
-				? { category_id: null }
-				: {}),
+		...(type === "expense" || type === "income"
+			? { category_id: entry.categoryId ? Number(entry.categoryId) : null }
+			: {}),
 	};
+}
+
+export function sortTransactions(transactions: Transaction[]) {
+	return [...transactions].sort(
+		(left, right) =>
+			Date.parse(right.occurred_at) - Date.parse(left.occurred_at) ||
+			Date.parse(right.created_at) - Date.parse(left.created_at),
+	);
 }
 
 export function entryFromTransaction(transaction: Transaction): EntryForm {
