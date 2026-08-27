@@ -12,6 +12,7 @@ Tech stack
 - TypeScript
 - Vite
 - CSS
+- Cloudflare Workers / Pages (optional deployment target)
 
 Features
 - View account balances and transaction history
@@ -59,6 +60,14 @@ The frontend can be deployed to any static-hosting service that supports single-
 npm run build
 # then follow your host's deployment instructions (upload the dist/build folder or connect the repo)
 ```
+
+Cloudflare Workers
+This project can also be served from the Cloudflare edge using Cloudflare Pages or a Worker. To deploy with Wrangler (Cloudflare's CLI):
+
+1. Install Wrangler: `npm install -g wrangler` or use npx.
+2. Configure `wrangler.toml` for your account and project.
+3. Build the project: `npm run build`.
+4. Publish the site: `wrangler publish` (or follow Pages instructions if using Cloudflare Pages).
 
 Contributing
 Contributions are welcome. Please open issues or PRs for fixes and improvements.
