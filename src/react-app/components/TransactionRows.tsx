@@ -67,12 +67,58 @@ function TransactionRow({
 
 	return (
 		<div className="transaction-row">
-			<div className={`transaction-icon ${transaction.type}`}>
-				{transaction.type === "income"
-					? "IN"
-					: transaction.type === "expense"
-						? "OUT"
-						: "TRF"}
+			<div
+				className={`transaction-icon ${transaction.type}`}
+				aria-label={
+					transaction.type === "income"
+						? "Income"
+						: transaction.type === "expense"
+							? "Expense"
+							: "Transfer"
+				}
+			>
+				{transaction.type === "income" ? (
+					<svg
+						aria-hidden="true"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						strokeWidth="2.4"
+						strokeLinecap="round"
+						strokeLinejoin="round"
+					>
+						<path d="M7 17 17 7" />
+						<path d="M8 7h9v9" />
+					</svg>
+				) : transaction.type === "expense" ? (
+					<svg
+						aria-hidden="true"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						strokeWidth="2.4"
+						strokeLinecap="round"
+						strokeLinejoin="round"
+					>
+						<path d="M7 7l10 10" />
+						<path d="M17 8v9H8" />
+					</svg>
+				) : (
+					<svg
+						aria-hidden="true"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						strokeWidth="2.4"
+						strokeLinecap="round"
+						strokeLinejoin="round"
+					>
+						<path d="M8 3 4 7l4 4" />
+						<path d="M4 7h16" />
+						<path d="m16 21 4-4-4-4" />
+						<path d="M20 17H4" />
+					</svg>
+				)}
 			</div>
 			<div className="transaction-details">
 				<strong>{label}</strong>
