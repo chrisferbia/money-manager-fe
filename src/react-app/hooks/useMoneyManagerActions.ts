@@ -63,10 +63,13 @@ export function useMoneyManagerActions({
 		event: FormEvent<HTMLFormElement>,
 		entry: EntryForm,
 		editing: Transaction | null,
-	) {
+	): Promise<boolean> {
 		event.preventDefault();
 		const validationError = validateEntry(entry);
-		if (validationError) return setError(validationError);
+		if (validationError) {
+			setError(validationError);
+			return false;
+		}
 		setSaving(true);
 		try {
 			if (editing)
@@ -90,8 +93,10 @@ export function useMoneyManagerActions({
 			setError("");
 			setNotice(wasEditing ? "Transaction updated." : "Transaction added.");
 			await refresh();
+			return true;
 		} catch (reason) {
 			setError(errorMessage(reason, "Could not save transaction."));
+			return false;
 		} finally {
 			setSaving(false);
 		}
@@ -105,6 +110,7 @@ export function useMoneyManagerActions({
 
 	async function deleteTransaction(transaction: Transaction) {
 		const label =
+			transaction.counterparty?.trim() ||
 			transaction.description?.trim() ||
 			(transaction.type === "transfer" ? "This transfer" : "This transaction");
 		if (!window.confirm(`Delete "${label}"? This cannot be undone.`)) return;

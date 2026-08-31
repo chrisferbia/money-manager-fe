@@ -4,7 +4,7 @@ type TransactionRowContext = {
 	accountNames: Map<number, string>;
 	categoryNames: Map<number, string>;
 	money: MoneyFormatter;
-	onEdit: (transaction: Transaction) => void;
+	onEdit: (transaction: Transaction, trigger?: HTMLButtonElement) => void;
 	onDelete: (transaction: Transaction) => void;
 };
 
@@ -57,12 +57,28 @@ function TransactionRow({
 	onEdit,
 	onDelete,
 }: TransactionRowContext & { transaction: Transaction }) {
-	const label =
+	const typeLabel =
+		transaction.type === "income"
+			? "Income"
+			: transaction.type === "expense"
+				? "Expense"
+				: "Transfer";
+	const categoryLabel =
 		transaction.type === "transfer"
 			? `${accountNames.get(transaction.account_id)} to ${accountNames.get(transaction.related_account_id ?? 0)}`
 			: transaction.category_id
 				? (categoryNames.get(transaction.category_id) ?? "Category")
-				: transaction.type;
+				: typeLabel;
+	const counterparty = transaction.counterparty?.trim();
+	const label = counterparty || categoryLabel;
+	const description = transaction.description?.trim();
+	const context = [
+		counterparty ? categoryLabel : null,
+		accountNames.get(transaction.account_id) || "Account",
+		description,
+	]
+		.filter(Boolean)
+		.join(" · ");
 	const sign = transaction.type === "income" ? "+" : transaction.type === "expense" ? "-" : "";
 
 	return (
@@ -123,10 +139,7 @@ function TransactionRow({
 			<div className="transaction-details">
 				<strong>{label}</strong>
 				<span>
-					{transaction.description ||
-						accountNames.get(transaction.account_id) ||
-						"Transaction"}{" "}
-					·{" "}
+					{context} ·{" "}
 					{new Date(transaction.occurred_at).toLocaleDateString("en-US", {
 						month: "short",
 						day: "numeric",
@@ -141,7 +154,7 @@ function TransactionRow({
 			<button
 				type="button"
 				className="edit-button"
-				onClick={() => onEdit(transaction)}
+				onClick={(event) => onEdit(transaction, event.currentTarget)}
 				aria-label={`Edit ${label}`}
 			>
 				Edit

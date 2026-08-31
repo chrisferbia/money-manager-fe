@@ -9,6 +9,7 @@ export function blankEntry(accountId = ""): EntryForm {
 		destinationId: "",
 		categoryId: "",
 		amount: "",
+		counterparty: "",
 		description: "",
 		date: today(),
 	};

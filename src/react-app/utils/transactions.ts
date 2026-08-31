@@ -21,6 +21,7 @@ export function amountInIdr(entry: EntryForm) {
 export function commonTransactionPayload(entry: EntryForm) {
 	return {
 		amount: amountInIdr(entry),
+		counterparty: entry.counterparty.trim() || null,
 		description: entry.description.trim() || null,
 		occurred_at: `${entry.date}T12:00:00Z`,
 	};
@@ -69,6 +70,7 @@ export function entryFromTransaction(transaction: Transaction): EntryForm {
 		destinationId: transaction.related_account_id ? String(transaction.related_account_id) : "",
 		categoryId: transaction.category_id ? String(transaction.category_id) : "",
 		amount: String(transaction.amount),
+		counterparty: transaction.counterparty ?? "",
 		description: transaction.description ?? "",
 		date: transaction.occurred_at.slice(0, 10),
 	};

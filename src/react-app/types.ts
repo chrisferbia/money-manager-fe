@@ -24,6 +24,7 @@ export type Transaction = {
 	category_id: number | null;
 	related_account_id: number | null;
 	amount: number;
+	counterparty: string | null;
 	description: string | null;
 	occurred_at: string;
 	created_at: string;
@@ -41,6 +42,7 @@ export type EntryForm = {
 	destinationId: string;
 	categoryId: string;
 	amount: string;
+	counterparty: string;
 	description: string;
 	date: string;
 };
