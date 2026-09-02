@@ -67,7 +67,7 @@ npm run build
 npm run deploy
 ```
 
-For Cloudflare Workers Builds, use `npm run build` as the build command and `npm run deploy` as the deploy command. Configure `BACKEND_URL` under the Worker's runtime variables, not under **Build variables and secrets**. Build variables are only available while compiling the application and cannot provide a runtime Worker binding.
+For Cloudflare Workers Builds, use `npm run build` as the build command and `npm run deploy` as the deploy command. Configure `BACKEND_URL` under the Worker's runtime variables, not under **Build variables and secrets**. Build variables are only available while compiling the application and cannot provide a runtime Worker binding. The `keep_vars` setting in `wrangler.json` preserves dashboard-configured plaintext variables during automatic deployments.
 
 Each Worker can use a different `BACKEND_URL` without rebuilding the frontend. The Worker name in each deployment must also match the Wrangler configuration used for that deployment.
 
