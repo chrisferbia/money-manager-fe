@@ -45,29 +45,34 @@ Available scripts
 - npm run lint — run ESLint (if configured)
 
 Environment
-If the app needs an API backend, configure the API base URL via an environment variable. Create a .env file in the project root (this repo uses Vite semantics):
+The deployed frontend reads its backend URL from `/runtime-config.json`. The Worker creates that response from its `BACKEND_URL` runtime variable, so the same build can be deployed to multiple Workers.
 
-```env
-VITE_API_BASE_URL=https://api.example.com
+For each Worker, go to **Settings > Variables and Secrets > Runtime variables and secrets** and add:
+
+```text
+Name:  BACKEND_URL
+Type: Text / Variable
+Value: https://your-backend.example.com
 ```
 
-Replace the value with your backend URL. Restart the dev server after changing environment variables.
+Use the backend origin or path prefix that should be followed by `/accounts`, `/categories`, and the other API paths. Do not include credentials, query parameters, or a fragment. `BACKEND_URL` is not a secret: it is intentionally returned to the browser. Do not put API keys or passwords in it.
+
+For local Worker development, create `.dev.vars` using `.dev.vars.example` as a reference. Alternatively, set `VITE_API_URL` locally; it is used only by `npm run dev` and is not used by production builds.
 
 Deployment
-The frontend can be deployed to any static-hosting service that supports single-page apps (Netlify, Vercel, GitHub Pages, Cloudflare Pages, etc.). Build and deploy:
+Build and deploy the Worker with:
 
 ```bash
 npm run build
-# then follow your host's deployment instructions (upload the dist/build folder or connect the repo)
+npm run deploy
 ```
 
-Cloudflare Workers
-This project can also be served from the Cloudflare edge using Cloudflare Pages or a Worker. To deploy with Wrangler (Cloudflare's CLI):
+For Cloudflare Workers Builds, use `npm run build` as the build command and `npm run deploy` as the deploy command. Configure `BACKEND_URL` under the Worker's runtime variables, not under **Build variables and secrets**. Build variables are only available while compiling the application and cannot provide a runtime Worker binding.
 
-1. Install Wrangler: `npm install -g wrangler` or use npx.
-2. Configure `wrangler.toml` for your account and project.
-3. Build the project: `npm run build`.
-4. Publish the site: `wrangler publish` (or follow Pages instructions if using Cloudflare Pages).
+Each Worker can use a different `BACKEND_URL` without rebuilding the frontend. The Worker name in each deployment must also match the Wrangler configuration used for that deployment.
+
+Direct backend requests
+The Worker does not proxy API requests. After loading the runtime configuration, the browser sends requests directly to `BACKEND_URL`. Therefore, configure the backend CORS policy to allow every frontend Worker origin, for example each `https://<frontend-worker>.workers.dev` URL. A backend URL or API credential cannot be used as a browser secret.
 
 Contributing
 Contributions are welcome. Please open issues or PRs for fixes and improvements.
