@@ -1168,7 +1168,48 @@ footer {
 }
 @media (max-width: 700px) {
 	.app-shell {
-		padding: 22px 16px 32px;
+		padding-bottom: calc(32px + env(safe-area-inset-bottom));
+	}
+	.main-nav {
+		scrollbar-width: none;
+		overflow-y: hidden;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+		overscroll-behavior-inline: contain;
+		scroll-snap-type: x proximity;
+	}
+	.main-nav::-webkit-scrollbar {
+		display: none;
+	}
+	.main-nav button {
+		min-height: 44px;
+		scroll-snap-align: start;
+	}
+	.panel-heading > div,
+	.page-heading > div {
+		min-width: 0;
+	}
+	input,
+	select {
+		font-size: 16px;
+	}
+	.primary-button,
+	.submit-button,
+	.cancel-button {
+		min-height: 44px;
+	}
+	.account-dialog,
+	.category-dialog,
+	.transaction-dialog {
+		max-height: calc(100vh - 24px);
+		max-height: calc(100dvh - 24px);
+	}
+	.transaction-dialog-content {
+		overscroll-behavior: contain;
+		-webkit-overflow-scrolling: touch;
+	}
+	.app-shell {
+		padding: 22px 16px calc(32px + env(safe-area-inset-bottom));
 	}
 	.topbar {
 		margin-bottom: 28px;
@@ -1349,5 +1390,123 @@ footer {
 	}
 	.managed-category-grid {
 		grid-template-columns: 1fr;
+	}
+}
+
+@media (max-width: 480px) {
+	.app-shell {
+		padding-inline: 12px;
+	}
+	.topbar {
+		display: grid;
+		grid-template-columns: 38px minmax(0, 1fr);
+		column-gap: 12px;
+		row-gap: 9px;
+		align-items: center;
+	}
+	.topbar .brand-mark {
+		grid-row: span 2;
+	}
+	.topbar .local-badge {
+		grid-column: 2;
+		margin-left: 0;
+		justify-self: start;
+	}
+	.main-nav {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		overflow: visible;
+	}
+	.main-nav button {
+		width: 100%;
+		padding-inline: 6px;
+	}
+	.stats {
+		grid-template-columns: 1fr;
+	}
+	.stat-card {
+		padding: 16px;
+	}
+	.stat-card strong {
+		font-size: 22px;
+	}
+	.panel {
+		padding: 16px;
+		border-radius: 14px;
+	}
+	.account-cards,
+	.filter-bar,
+	.form-row,
+	.date-filters {
+		grid-template-columns: 1fr;
+	}
+	.date-filters {
+		display: grid;
+		gap: 0;
+	}
+	.date-filters label + label {
+		margin-top: 2px;
+	}
+	.date-filters .cancel-button {
+		width: 100%;
+		margin-top: 0;
+	}
+	.filter-bar .cancel-button {
+		grid-column: auto;
+	}
+	.transaction-page-heading > .primary-button,
+	.category-section-heading > .primary-button,
+	.account-heading-actions .primary-button {
+		width: 100%;
+	}
+	.account-heading-actions {
+		display: grid;
+		gap: 14px;
+	}
+	.transaction-row {
+		display: grid;
+		grid-template-columns: 34px minmax(0, 1fr) auto auto;
+		column-gap: 8px;
+		row-gap: 8px;
+		align-items: center;
+	}
+	.transaction-row .transaction-icon {
+		grid-row: span 2;
+	}
+	.transaction-row .transaction-details {
+		grid-column: 2 / -1;
+	}
+	.transaction-row > strong {
+		grid-column: 2;
+		min-width: 0;
+		margin-left: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.transaction-row .edit-button {
+		grid-column: 3;
+		grid-row: 2;
+	}
+	.transaction-row .delete-button {
+		grid-column: 4;
+		grid-row: 2;
+	}
+	.transaction-row .edit-button,
+	.transaction-row .delete-button {
+		min-width: 44px;
+		min-height: 36px;
+		padding-inline: 7px;
+	}
+	.report-row {
+		gap: 12px;
+	}
+	.report-row > div {
+		min-width: 0;
+	}
+	.report-row b {
+		font-size: 15px;
+	}
+	.api-error {
+		gap: 8px;
 	}
 }
