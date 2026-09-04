@@ -1150,6 +1150,11 @@ select:focus {
 	color: #9aa19b;
 	font-size: 11px;
 }
+.transaction-details .transaction-subcategory {
+	color: #527262;
+	font-size: 10px;
+	font-weight: 700;
+}
 .transaction-row > strong {
 	font-size: 13px;
 	white-space: nowrap;

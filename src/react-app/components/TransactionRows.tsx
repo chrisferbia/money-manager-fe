@@ -72,6 +72,7 @@ function TransactionRow({
 	const counterparty = transaction.counterparty?.trim();
 	const label = counterparty || categoryLabel;
 	const description = transaction.description?.trim();
+	const subcategory = transaction.transaction_subtype?.trim();
 	const context = [
 		counterparty ? categoryLabel : null,
 		accountNames.get(transaction.account_id) || "Account",
@@ -146,6 +147,9 @@ function TransactionRow({
 						year: "numeric",
 					})}
 				</span>
+				{subcategory && (
+					<span className="transaction-subcategory">Subcategory: {subcategory}</span>
+				)}
 			</div>
 			<strong className={transaction.type}>
 				{sign}

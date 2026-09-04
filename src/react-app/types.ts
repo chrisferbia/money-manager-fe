@@ -28,6 +28,7 @@ export type Transaction = {
 	description: string | null;
 	occurred_at: string;
 	created_at: string;
+	transaction_subtype: string | null;
 };
 
 export type ReportItem = {
