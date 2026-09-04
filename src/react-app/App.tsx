@@ -32,6 +32,7 @@ function App() {
 		error,
 		setError,
 		loading,
+		initialLoading,
 		refresh,
 		refreshAccounts,
 	} = useMoneyManagerData();
@@ -97,6 +98,7 @@ function App() {
 			error={error}
 			notice={notice}
 			loading={loading}
+			initialLoading={initialLoading}
 			onViewChange={selectView}
 			onDismissError={() => setError("")}
 		>

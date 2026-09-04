@@ -14,6 +14,7 @@ type AppShellProps = {
 	error: string;
 	notice: string;
 	loading: boolean;
+	initialLoading: boolean;
 	onViewChange: (view: View) => void;
 	onDismissError: () => void;
 	children: ReactNode;
@@ -24,6 +25,7 @@ export function AppShell({
 	error,
 	notice,
 	loading,
+	initialLoading,
 	onViewChange,
 	onDismissError,
 	children,
@@ -49,7 +51,7 @@ export function AppShell({
 					</button>
 				))}
 			</nav>
-			<main>
+			<main aria-busy={loading}>
 				{error && (
 					<div className="api-error" role="alert">
 						<strong>Action failed</strong>
@@ -62,8 +64,25 @@ export function AppShell({
 						{notice}
 					</div>
 				)}
-				{loading && <div className="loading-bar">Refreshing data...</div>}
-				{children}
+				{initialLoading ? (
+					<div className="loading-state" role="status" aria-live="polite">
+						<span className="loading-spinner" aria-hidden="true" />
+						<div>
+							<strong>Loading your ledger</strong>
+							<span>Fetching accounts, transactions, and reports...</span>
+						</div>
+					</div>
+				) : (
+					<>
+						{loading && (
+							<div className="loading-bar" role="status" aria-live="polite">
+								<span className="loading-spinner" aria-hidden="true" />
+								<span>Refreshing data...</span>
+							</div>
+						)}
+						{children}
+					</>
+				)}
 			</main>
 			<footer>Data is managed by your Money Manager backend.</footer>
 		</div>

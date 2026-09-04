@@ -109,9 +109,56 @@ h3 {
 	background: #203b31;
 }
 .loading-bar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
 	padding: 8px 0;
 	color: #8a918b;
 	font-size: 11px;
+}
+.loading-state {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 14px;
+	min-height: 260px;
+	padding: 32px;
+	border: 1px solid #e2e0d8;
+	border-radius: 16px;
+	background: #fbfaf7;
+}
+.loading-state strong,
+.loading-state span {
+	display: block;
+}
+.loading-state strong {
+	color: #3d4941;
+	font-size: 14px;
+}
+.loading-state div > span {
+	margin-top: 5px;
+	color: #929a93;
+	font-size: 11px;
+}
+.loading-spinner {
+	display: block;
+	flex: 0 0 18px;
+	width: 18px;
+	height: 18px;
+	border: 2px solid #dfeae3;
+	border-top-color: #527262;
+	border-radius: 50%;
+	animation: loading-spin 800ms linear infinite;
+}
+@keyframes loading-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.loading-spinner {
+		animation: none;
+	}
 }
 .api-error {
 	display: flex;

@@ -14,6 +14,7 @@ export function useMoneyManagerData() {
 	const [filters, setFilters] = useState<DashboardFilters>(emptyFilters);
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(true);
+	const [hasLoaded, setHasLoaded] = useState(false);
 
 	const refresh = useCallback(async () => {
 		setLoading(true);
@@ -45,6 +46,7 @@ export function useMoneyManagerData() {
 			setError(errorMessage(reason, "Could not connect to the backend."));
 		} finally {
 			setLoading(false);
+			setHasLoaded(true);
 		}
 	}, [filters]);
 
@@ -67,6 +69,7 @@ export function useMoneyManagerData() {
 		error,
 		setError,
 		loading,
+		initialLoading: loading && !hasLoaded,
 		refresh,
 		refreshAccounts,
 	};
