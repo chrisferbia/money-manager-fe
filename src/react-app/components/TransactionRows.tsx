@@ -4,8 +4,7 @@ type TransactionRowContext = {
 	accountNames: Map<number, string>;
 	categoryNames: Map<number, string>;
 	money: MoneyFormatter;
-	onEdit: (transaction: Transaction, trigger?: HTMLButtonElement) => void;
-	onDelete: (transaction: Transaction) => void;
+	onEdit: (transaction: Transaction, trigger?: HTMLElement) => void;
 };
 
 type TransactionRowsProps = TransactionRowContext & {
@@ -14,13 +13,20 @@ type TransactionRowsProps = TransactionRowContext & {
 	emptyDescription?: string;
 };
 
+function formatTransactionDate(value: string) {
+	return new Date(value).toLocaleDateString("en-US", {
+		month: "short",
+		day: "numeric",
+		year: "numeric",
+	});
+}
+
 export function TransactionRows({
 	transactions,
 	accountNames,
 	categoryNames,
 	money,
 	onEdit,
-	onDelete,
 	emptyTitle = "No transactions yet",
 	emptyDescription = "Add an income, expense, or transfer to see activity here.",
 }: TransactionRowsProps) {
@@ -32,18 +38,32 @@ export function TransactionRows({
 			</div>
 		);
 
+	const groups = new Map<string, Transaction[]>();
+	for (const transaction of transactions) {
+		const dateLabel = formatTransactionDate(transaction.occurred_at);
+		const group = groups.get(dateLabel) ?? [];
+		group.push(transaction);
+		groups.set(dateLabel, group);
+	}
+
 	return (
 		<div className="transaction-list">
-			{transactions.map((transaction) => (
-				<TransactionRow
-					key={transaction.id}
-					transaction={transaction}
-					accountNames={accountNames}
-					categoryNames={categoryNames}
-					money={money}
-					onEdit={onEdit}
-					onDelete={onDelete}
-				/>
+			{Array.from(groups, ([dateLabel, group]) => (
+				<section className="transaction-date-group" key={dateLabel}>
+					<h4 className="transaction-date-heading">{dateLabel}</h4>
+					<div className="transaction-date-list">
+						{group.map((transaction) => (
+							<TransactionRow
+								key={transaction.id}
+								transaction={transaction}
+								accountNames={accountNames}
+								categoryNames={categoryNames}
+								money={money}
+								onEdit={onEdit}
+							/>
+						))}
+					</div>
+				</section>
 			))}
 		</div>
 	);
@@ -55,7 +75,6 @@ function TransactionRow({
 	categoryNames,
 	money,
 	onEdit,
-	onDelete,
 }: TransactionRowContext & { transaction: Transaction }) {
 	const typeLabel =
 		transaction.type === "income"
@@ -63,114 +82,53 @@ function TransactionRow({
 			: transaction.type === "expense"
 				? "Expense"
 				: "Transfer";
+	const sourceAccountLabel = accountNames.get(transaction.account_id) ?? "Account";
+	const destinationAccountLabel =
+		accountNames.get(transaction.related_account_id ?? 0) ?? "Account";
+	const accountLabel =
+		transaction.type === "transfer"
+			? `${sourceAccountLabel} -> ${destinationAccountLabel}`
+			: sourceAccountLabel;
 	const categoryLabel =
 		transaction.type === "transfer"
-			? `${accountNames.get(transaction.account_id)} to ${accountNames.get(transaction.related_account_id ?? 0)}`
+			? "-"
 			: transaction.category_id
 				? (categoryNames.get(transaction.category_id) ?? "Category")
 				: typeLabel;
-	const counterparty = transaction.counterparty?.trim();
-	const label = counterparty || categoryLabel;
-	const description = transaction.description?.trim();
-	const subcategory = transaction.transaction_subtype?.trim();
-	const context = [
-		counterparty ? categoryLabel : null,
-		accountNames.get(transaction.account_id) || "Account",
-		description,
-	]
-		.filter(Boolean)
-		.join(" · ");
+	const description = transaction.description?.trim() || "-";
+	const counterparty = transaction.counterparty?.trim() || "-";
 	const sign = transaction.type === "income" ? "+" : transaction.type === "expense" ? "-" : "";
 
 	return (
-		<div className="transaction-row">
-			<div
-				className={`transaction-icon ${transaction.type}`}
-				aria-label={
-					transaction.type === "income"
-						? "Income"
-						: transaction.type === "expense"
-							? "Expense"
-							: "Transfer"
+		<div
+			className={`transaction-row ${transaction.type}`}
+			role="button"
+			tabIndex={0}
+			onClick={(event) => onEdit(transaction, event.currentTarget)}
+			onKeyDown={(event) => {
+				if (event.key === "Enter" || event.key === " ") {
+					event.preventDefault();
+					onEdit(transaction, event.currentTarget);
 				}
-			>
-				{transaction.type === "income" ? (
-					<svg
-						aria-hidden="true"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						strokeWidth="2.4"
-						strokeLinecap="round"
-						strokeLinejoin="round"
-					>
-						<path d="M7 17 17 7" />
-						<path d="M8 7h9v9" />
-					</svg>
-				) : transaction.type === "expense" ? (
-					<svg
-						aria-hidden="true"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						strokeWidth="2.4"
-						strokeLinecap="round"
-						strokeLinejoin="round"
-					>
-						<path d="M7 7l10 10" />
-						<path d="M17 8v9H8" />
-					</svg>
-				) : (
-					<svg
-						aria-hidden="true"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						strokeWidth="2.4"
-						strokeLinecap="round"
-						strokeLinejoin="round"
-					>
-						<path d="M8 3 4 7l4 4" />
-						<path d="M4 7h16" />
-						<path d="m16 21 4-4-4-4" />
-						<path d="M20 17H4" />
-					</svg>
-				)}
-			</div>
-			<div className="transaction-details">
-				<strong>{label}</strong>
-				<span>
-					{context} ·{" "}
-					{new Date(transaction.occurred_at).toLocaleDateString("en-US", {
-						month: "short",
-						day: "numeric",
-						year: "numeric",
-					})}
-				</span>
-				{subcategory && (
-					<span className="transaction-subcategory">Subcategory: {subcategory}</span>
-				)}
-			</div>
-			<strong className={transaction.type}>
+			}}
+			aria-label={`Open ${typeLabel.toLowerCase()} transaction for ${categoryLabel}`}
+		>
+			<span className="transaction-value transaction-category" title={categoryLabel}>
+				{categoryLabel}
+			</span>
+			<span className="transaction-value transaction-description" title={description}>
+				{description}
+			</span>
+			<strong className={`transaction-value transaction-amount ${transaction.type}`}>
 				{sign}
 				{money(transaction.amount)}
 			</strong>
-			<button
-				type="button"
-				className="edit-button"
-				onClick={(event) => onEdit(transaction, event.currentTarget)}
-				aria-label={`Edit ${label}`}
-			>
-				Edit
-			</button>
-			<button
-				type="button"
-				className="delete-button"
-				onClick={() => onDelete(transaction)}
-				aria-label={`Delete ${label}`}
-			>
-				Delete
-			</button>
+			<span className="transaction-value transaction-account" title={accountLabel}>
+				{accountLabel}
+			</span>
+			<span className="transaction-value transaction-counterparty" title={counterparty}>
+				{counterparty}
+			</span>
 		</div>
 	);
 }

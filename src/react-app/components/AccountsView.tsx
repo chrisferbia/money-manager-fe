@@ -24,6 +24,7 @@ type AccountsViewProps = {
 	setEditing: Dispatch<SetStateAction<Account | null>>;
 	saving: boolean;
 	deletingId: number | null;
+	onAccountSelect: (accountId: number) => void;
 	onSave: (event: FormEvent<HTMLFormElement>) => Promise<boolean>;
 	onDelete: (account: Account) => void;
 };
@@ -42,6 +43,7 @@ export function AccountsView({
 	setEditing,
 	saving,
 	deletingId,
+	onAccountSelect,
 	onSave,
 	onDelete,
 }: AccountsViewProps) {
@@ -210,6 +212,16 @@ export function AccountsView({
 									<article
 										className={`managed-account-card${isEditing ? " is-editing" : ""}`}
 										key={account.id}
+										role="button"
+										tabIndex={0}
+										aria-label={`View transactions for ${account.name}`}
+										onClick={() => onAccountSelect(account.id)}
+										onKeyDown={(event) => {
+											if (event.key === "Enter" || event.key === " ") {
+												event.preventDefault();
+												onAccountSelect(account.id);
+											}
+										}}
 									>
 										<div className="account-card-header">
 											<div className="account-type-label">
@@ -227,9 +239,10 @@ export function AccountsView({
 													className="edit-button"
 													disabled={saving || deletingId !== null}
 													aria-label={`Edit ${account.name}`}
-													onClick={(event) =>
-														startEdit(account, event.currentTarget)
-													}
+													onClick={(event) => {
+														event.stopPropagation();
+														startEdit(account, event.currentTarget);
+													}}
 												>
 													Edit
 												</button>
@@ -245,7 +258,10 @@ export function AccountsView({
 															? "Cancel editing before deleting"
 															: undefined
 													}
-													onClick={() => onDelete(account)}
+													onClick={(event) => {
+														event.stopPropagation();
+														onDelete(account);
+													}}
 												>
 													{deletingId === account.id
 														? "Deleting..."

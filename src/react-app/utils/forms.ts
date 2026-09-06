@@ -1,6 +1,13 @@
 import type { EntryForm } from "../types";
 
-export const today = () => new Date().toISOString().slice(0, 10);
+function pad(value: number) {
+	return String(value).padStart(2, "0");
+}
+
+export function currentLocalDateTime() {
+	const now = new Date();
+	return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+}
 
 export function blankEntry(accountId = ""): EntryForm {
 	return {
@@ -11,6 +18,6 @@ export function blankEntry(accountId = ""): EntryForm {
 		amount: "",
 		counterparty: "",
 		description: "",
-		date: today(),
+		date: currentLocalDateTime(),
 	};
 }

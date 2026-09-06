@@ -24,12 +24,13 @@ type TransactionsViewProps = {
 	setEntry: Dispatch<SetStateAction<EntryForm>>;
 	editing: Transaction | null;
 	saving: boolean;
+	openAddRequest: number;
 	expenseCategories: Category[];
 	incomeCategories: Category[];
 	money: MoneyFormatter;
 	onSave: (event: FormEvent<HTMLFormElement>) => Promise<boolean>;
-	onEdit: (transaction: Transaction, trigger?: HTMLButtonElement) => void;
-	onDelete: (transaction: Transaction) => void;
+	onEdit: (transaction: Transaction, trigger?: HTMLElement) => void;
+	onDelete: (transaction: Transaction) => Promise<boolean>;
 	onCancel: () => void;
 };
 
@@ -47,6 +48,7 @@ export function TransactionsView({
 	setEntry,
 	editing,
 	saving,
+	openAddRequest,
 	expenseCategories,
 	incomeCategories,
 	money,
@@ -69,16 +71,16 @@ export function TransactionsView({
 		visibleTransactions.length < transactions.length
 			? `Showing ${visibleTransactions.length} of ${transactionCountLabel}`
 			: transactionCountLabel;
+	const activeFilterCount = Object.values(filters).filter(Boolean).length;
 	const [formOpen, setFormOpen] = useState(false);
+	const [filtersOpen, setFiltersOpen] = useState(false);
+	const [deleting, setDeleting] = useState(false);
 	const dialogRef = useRef<HTMLDialogElement>(null);
-	const addButtonRef = useRef<HTMLButtonElement>(null);
-	const returnFocusRef = useRef<HTMLButtonElement | null>(null);
-	const openAddForm = () => {
-		returnFocusRef.current = addButtonRef.current;
-		onCancel();
-		setFormOpen(true);
-	};
-	const openEditForm = (transaction: Transaction, trigger?: HTMLButtonElement) => {
+	const returnFocusRef = useRef<HTMLElement | null>(null);
+	const handledAddRequestRef = useRef(0);
+	const onCancelRef = useRef(onCancel);
+	onCancelRef.current = onCancel;
+	const openEditForm = (transaction: Transaction, trigger?: HTMLElement) => {
 		returnFocusRef.current = trigger ?? null;
 		onEdit(transaction, trigger);
 		setFormOpen(true);
@@ -90,6 +92,15 @@ export function TransactionsView({
 	};
 	const handleSave = async (event: FormEvent<HTMLFormElement>) => {
 		if (await onSave(event)) closeForm();
+	};
+	const handleDelete = async () => {
+		if (!editing) return;
+		setDeleting(true);
+		try {
+			if (await onDelete(editing)) closeForm();
+		} finally {
+			setDeleting(false);
+		}
 	};
 
 	useEffect(() => {
@@ -106,6 +117,14 @@ export function TransactionsView({
 		}
 	}, [formOpen, editing]);
 
+	useEffect(() => {
+		if (openAddRequest === 0 || openAddRequest <= handledAddRequestRef.current) return;
+		handledAddRequestRef.current = openAddRequest;
+		returnFocusRef.current = document.querySelector<HTMLElement>(".floating-add-button");
+		onCancelRef.current();
+		setFormOpen(true);
+	}, [openAddRequest]);
+
 	return (
 		<>
 			<section className="page-heading transaction-page-heading">
@@ -116,24 +135,31 @@ export function TransactionsView({
 						Record, edit, filter, and remove activity across your accounts.
 					</p>
 				</div>
-				<button
-					ref={addButtonRef}
-					className="primary-button"
-					type="button"
-					onClick={openAddForm}
-					aria-haspopup="dialog"
-					aria-expanded={formOpen}
-					aria-controls="transaction-form"
-				>
-					+ Add transaction
-				</button>
 			</section>
-			<TransactionFilters
-				accounts={accounts}
-				categories={categories}
-				filters={filters}
-				setFilters={setFilters}
-			/>
+			<div className="filter-toggle-row">
+				<button
+					className="filter-toggle"
+					type="button"
+					aria-expanded={filtersOpen}
+					aria-controls="transaction-filters"
+					onClick={() => setFiltersOpen((open) => !open)}
+				>
+					{filtersOpen ? "Hide filters" : "Show filters"}
+					{activeFilterCount > 0 && (
+						<span className="filter-count">{activeFilterCount}</span>
+					)}
+				</button>
+			</div>
+			{filtersOpen && (
+				<div id="transaction-filters">
+					<TransactionFilters
+						accounts={accounts}
+						categories={categories}
+						filters={filters}
+						setFilters={setFilters}
+					/>
+				</div>
+			)}
 			<div className="filter-summary">
 				{hasFilters
 					? "Showing results for the selected filters."
@@ -173,6 +199,8 @@ export function TransactionsView({
 						incomeCategories={incomeCategories}
 						onSave={handleSave}
 						onCancel={closeForm}
+						onDelete={handleDelete}
+						deleting={deleting}
 					/>
 				</section>
 			</dialog>
@@ -190,7 +218,6 @@ export function TransactionsView({
 					categoryNames={categoryNames}
 					money={money}
 					onEdit={openEditForm}
-					onDelete={onDelete}
 					emptyTitle={hasFilters ? "No matching transactions" : "No transactions yet"}
 					emptyDescription={
 						hasFilters

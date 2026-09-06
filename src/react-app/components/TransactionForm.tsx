@@ -7,10 +7,12 @@ type TransactionFormProps = {
 	setEntry: Dispatch<SetStateAction<EntryForm>>;
 	editing: Transaction | null;
 	saving: boolean;
+	deleting: boolean;
 	expenseCategories: Category[];
 	incomeCategories: Category[];
 	onSave: (event: FormEvent<HTMLFormElement>) => void;
 	onCancel: () => void;
+	onDelete: () => Promise<void>;
 };
 
 function entryTypeLabel(type: EntryType) {
@@ -23,10 +25,12 @@ export function TransactionForm({
 	setEntry,
 	editing,
 	saving,
+	deleting,
 	expenseCategories,
 	incomeCategories,
 	onSave,
 	onCancel,
+	onDelete,
 }: TransactionFormProps) {
 	const update = (changes: Partial<EntryForm>) =>
 		setEntry((current) => ({ ...current, ...changes }));
@@ -43,7 +47,6 @@ export function TransactionForm({
 								? `active ${kind === "income" ? "income-tab" : kind === "transfer" ? "transfer-tab" : ""}`
 								: ""
 						}
-						disabled={Boolean(editing)}
 						aria-pressed={entry.type === kind}
 						onClick={() => update({ type: kind, categoryId: "", destinationId: "" })}
 					>
@@ -67,7 +70,7 @@ export function TransactionForm({
 					))}
 				</select>
 			</label>
-			{entry.type === "transfer" && !editing && (
+			{entry.type === "transfer" && (
 				<label>
 					Destination account
 					<select
@@ -108,9 +111,16 @@ export function TransactionForm({
 					</select>
 				</label>
 			)}
-			{editing?.type === "transfer" && (
+			{editing && (
+				<div className="transaction-subtype-field">
+					<span>Subcategory</span>
+					<strong>{editing.transaction_subtype?.trim() || "-"}</strong>
+					<small>Read-only transaction metadata.</small>
+				</div>
+			)}
+			{editing && entry.type === "transfer" && (
 				<p className="form-note">
-					Source and destination accounts cannot be changed for a transfer.
+					The source account cannot be changed while editing a transfer.
 				</p>
 			)}
 			<div className="form-row">
@@ -128,9 +138,10 @@ export function TransactionForm({
 					/>
 				</label>
 				<label>
-					Date
+					Date and time
 					<input
-						type="date"
+						type="datetime-local"
+						step="60"
 						value={entry.date}
 						required
 						onChange={(event) => update({ date: event.target.value })}
@@ -158,9 +169,19 @@ export function TransactionForm({
 				<span>+</span>
 			</button>
 			{editing && (
-				<button className="cancel-button" type="button" onClick={onCancel}>
-					Cancel editing
-				</button>
+				<>
+					<button className="cancel-button" type="button" onClick={onCancel}>
+						Cancel editing
+					</button>
+					<button
+						className="danger-button"
+						type="button"
+						disabled={saving || deleting}
+						onClick={() => void onDelete()}
+					>
+						{deleting ? "Deleting..." : "Delete transaction"}
+					</button>
+				</>
 			)}
 		</form>
 	);

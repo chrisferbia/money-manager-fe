@@ -51,6 +51,7 @@ function App() {
 	);
 	const [notice, setNotice] = useState("");
 	const [saving, setSaving] = useState(false);
+	const [addTransactionRequest, setAddTransactionRequest] = useState(0);
 
 	const { accountNames, categoryNames } = useMemo(
 		() => createNameMaps(accounts, categories),
@@ -91,6 +92,16 @@ function App() {
 		setCurrency(next);
 		persistCurrency(next);
 	}
+	function openTransactionComposer() {
+		setError("");
+		setNotice("");
+		setView("transactions");
+		setAddTransactionRequest((request) => request + 1);
+	}
+	function openAccountTransactions(accountId: number) {
+		setFilters({ account: String(accountId), type: "", category: "", from: "", to: "" });
+		selectView("transactions");
+	}
 
 	return (
 		<AppShell
@@ -99,6 +110,7 @@ function App() {
 			notice={notice}
 			loading={loading}
 			initialLoading={initialLoading}
+			onAddTransaction={openTransactionComposer}
 			onViewChange={selectView}
 			onDismissError={() => setError("")}
 		>
@@ -113,6 +125,7 @@ function App() {
 					expenses={expenses}
 					balance={balance}
 					money={money}
+					onAccountSelect={openAccountTransactions}
 					onNavigate={selectView}
 				/>
 			)}
@@ -132,6 +145,7 @@ function App() {
 					expenseCategories={expenseCategories}
 					incomeCategories={incomeCategories}
 					money={money}
+					openAddRequest={addTransactionRequest}
 					onSave={(event) => actions.saveEntry(event, entry, editing)}
 					onEdit={actions.editTransaction}
 					onDelete={actions.deleteTransaction}
@@ -149,6 +163,7 @@ function App() {
 					setEditing={setEditingAccount}
 					saving={saving}
 					deletingId={actions.deletingAccountId}
+					onAccountSelect={openAccountTransactions}
 					onSave={(event) => actions.saveAccount(event, accountDraft, editingAccount)}
 					onDelete={actions.deleteAccount}
 				/>

@@ -2,8 +2,15 @@ import type { EntryForm, Transaction } from "../types";
 
 export function validateEntry(entry: EntryForm): string | null {
 	const amount = Math.round(Number(entry.amount));
-	if (!entry.accountId || !Number.isFinite(amount) || amount <= 0 || !entry.date)
-		return "Account, date, and a positive amount are required.";
+	const occurredAt = new Date(entry.date);
+	if (
+		!entry.accountId ||
+		!Number.isFinite(amount) ||
+		amount <= 0 ||
+		!entry.date ||
+		Number.isNaN(occurredAt.getTime())
+	)
+		return "Account, date and time, and a positive amount are required.";
 	if (entry.type === "expense" && !entry.categoryId)
 		return "Expense transactions require a category.";
 	if (
@@ -23,7 +30,7 @@ export function commonTransactionPayload(entry: EntryForm) {
 		amount: amountInIdr(entry),
 		counterparty: entry.counterparty.trim() || null,
 		description: entry.description.trim() || null,
-		occurred_at: `${entry.date}T12:00:00Z`,
+		occurred_at: new Date(entry.date).toISOString(),
 	};
 }
 
@@ -46,12 +53,15 @@ export function createTransferPayload(entry: EntryForm) {
 	};
 }
 
-export function updateTransactionPayload(entry: EntryForm, type: Transaction["type"]) {
+export function updateTransactionPayload(entry: EntryForm) {
 	return {
+		type: entry.type,
+		related_account_id:
+			entry.type === "transfer" && entry.destinationId ? Number(entry.destinationId) : null,
 		...commonTransactionPayload(entry),
-		...(type === "expense" || type === "income"
+		...(entry.type === "expense" || entry.type === "income"
 			? { category_id: entry.categoryId ? Number(entry.categoryId) : null }
-			: {}),
+			: { category_id: null }),
 	};
 }
 
@@ -64,6 +74,10 @@ export function sortTransactions(transactions: Transaction[]) {
 }
 
 export function entryFromTransaction(transaction: Transaction): EntryForm {
+	const occurredAt = new Date(transaction.occurred_at);
+	const pad = (value: number) => String(value).padStart(2, "0");
+	const localDateTime = `${occurredAt.getFullYear()}-${pad(occurredAt.getMonth() + 1)}-${pad(occurredAt.getDate())}T${pad(occurredAt.getHours())}:${pad(occurredAt.getMinutes())}`;
+
 	return {
 		type: transaction.type,
 		accountId: String(transaction.account_id),
@@ -72,6 +86,6 @@ export function entryFromTransaction(transaction: Transaction): EntryForm {
 		amount: String(transaction.amount),
 		counterparty: transaction.counterparty ?? "",
 		description: transaction.description ?? "",
-		date: transaction.occurred_at.slice(0, 10),
+		date: localDateTime,
 	};
 }

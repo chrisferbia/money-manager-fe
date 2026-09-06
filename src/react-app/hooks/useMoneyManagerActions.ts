@@ -75,7 +75,7 @@ export function useMoneyManagerActions({
 			if (editing)
 				await request<Transaction>(`/transactions/${editing.id}`, {
 					method: "PATCH",
-					body: JSON.stringify(updateTransactionPayload(entry, editing.type)),
+					body: JSON.stringify(updateTransactionPayload(entry)),
 				});
 			else if (entry.type === "transfer")
 				await request<Transaction>("/transfers", {
@@ -108,18 +108,20 @@ export function useMoneyManagerActions({
 		setView("transactions");
 	}
 
-	async function deleteTransaction(transaction: Transaction) {
+	async function deleteTransaction(transaction: Transaction): Promise<boolean> {
 		const label =
 			transaction.counterparty?.trim() ||
 			transaction.description?.trim() ||
 			(transaction.type === "transfer" ? "This transfer" : "This transaction");
-		if (!window.confirm(`Delete "${label}"? This cannot be undone.`)) return;
+		if (!window.confirm(`Delete "${label}"? This cannot be undone.`)) return false;
 		try {
 			await request<void>(`/transactions/${transaction.id}`, { method: "DELETE" });
 			setNotice("Transaction deleted.");
 			await refresh();
+			return true;
 		} catch (reason) {
 			setError(errorMessage(reason, "Could not delete transaction."));
+			return false;
 		}
 	}
 

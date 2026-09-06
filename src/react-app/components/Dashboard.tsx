@@ -11,6 +11,7 @@ type DashboardProps = {
 	expenses: number;
 	balance: number;
 	money: MoneyFormatter;
+	onAccountSelect: (accountId: number) => void;
 	onNavigate: (view: View) => void;
 };
 
@@ -24,6 +25,7 @@ export function Dashboard({
 	expenses,
 	balance,
 	money,
+	onAccountSelect,
 	onNavigate,
 }: DashboardProps) {
 	const largestCategory = Math.max(...report.map((item) => item.total), 1);
@@ -72,7 +74,20 @@ export function Dashboard({
 					</div>
 					<div className="account-cards">
 						{accounts.map((account) => (
-							<div className="account-card" key={account.id}>
+							<div
+								className="account-card"
+								key={account.id}
+								role="button"
+								tabIndex={0}
+								onClick={() => onAccountSelect(account.id)}
+								onKeyDown={(event) => {
+									if (event.key === "Enter" || event.key === " ") {
+										event.preventDefault();
+										onAccountSelect(account.id);
+									}
+								}}
+								aria-label={`View transactions for ${account.name}`}
+							>
 								<span>{account.type.replace("_", " ")}</span>
 								<strong>{account.name}</strong>
 								<b>{money(account.balance ?? 0)}</b>
@@ -133,7 +148,6 @@ export function Dashboard({
 					categoryNames={categoryNames}
 					money={money}
 					onEdit={() => onNavigate("transactions")}
-					onDelete={() => undefined}
 				/>
 			</section>
 		</>

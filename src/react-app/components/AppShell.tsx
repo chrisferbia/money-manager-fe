@@ -15,6 +15,7 @@ type AppShellProps = {
 	notice: string;
 	loading: boolean;
 	initialLoading: boolean;
+	onAddTransaction: () => void;
 	onViewChange: (view: View) => void;
 	onDismissError: () => void;
 	children: ReactNode;
@@ -26,6 +27,7 @@ export function AppShell({
 	notice,
 	loading,
 	initialLoading,
+	onAddTransaction,
 	onViewChange,
 	onDismissError,
 	children,
@@ -39,6 +41,9 @@ export function AppShell({
 					<h1>Money manager</h1>
 				</div>
 				<span className="local-badge">Connected to API</span>
+				<button className="topbar-add-button" type="button" onClick={onAddTransaction}>
+					+ Add transaction
+				</button>
 			</header>
 			<nav className="main-nav" aria-label="Main navigation">
 				{navigation.map((item) => (
@@ -51,6 +56,15 @@ export function AppShell({
 					</button>
 				))}
 			</nav>
+			<button
+				className="floating-add-button"
+				type="button"
+				onClick={onAddTransaction}
+				aria-label="Add transaction"
+			>
+				<span aria-hidden="true">+</span>
+				Add transaction
+			</button>
 			<main aria-busy={loading}>
 				{error && (
 					<div className="api-error" role="alert">
