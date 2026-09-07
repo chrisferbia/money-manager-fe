@@ -52,10 +52,15 @@ export function AccountsView({
 	const nameInputRef = useRef<HTMLInputElement>(null);
 	const addButtonRef = useRef<HTMLButtonElement>(null);
 	const returnFocusRef = useRef<HTMLButtonElement | null>(null);
-	const totalBalance = accounts.reduce((sum, account) => sum + (account.balance ?? 0), 0);
 	const accountCountLabel = `${accounts.length} ${accounts.length === 1 ? "account" : "accounts"}`;
 	const sortedAccounts = [...accounts].sort(
 		(left, right) => left.sequence - right.sequence || left.id - right.id,
+	);
+	const accountGroups = Array.from(new Set(sortedAccounts.map((account) => account.type))).map(
+		(type) => ({
+			type,
+			accounts: sortedAccounts.filter((account) => account.type === type),
+		}),
 	);
 	const resetForm = () => {
 		setEditing(null);
@@ -96,28 +101,17 @@ export function AccountsView({
 
 	return (
 		<>
-			<section className="page-heading account-page-heading">
-				<div>
-					<p className="eyebrow">REFERENCE DATA</p>
-					<h2>Accounts</h2>
-					<p className="muted">Manage the places where you keep money.</p>
-				</div>
-				<div className="account-heading-actions">
-					<div className={`account-total-summary ${balanceTone(totalBalance)}`}>
-						<span>Total balance</span>
-						<strong>{money(totalBalance)}</strong>
-					</div>
-					<button
-						ref={addButtonRef}
-						className="primary-button"
-						type="button"
-						onClick={openAddForm}
-						aria-expanded={formOpen}
-						aria-controls="account-form"
-					>
-						+ Add account
-					</button>
-				</div>
+			<section className="account-toolbar">
+				<button
+					ref={addButtonRef}
+					className="primary-button"
+					type="button"
+					onClick={openAddForm}
+					aria-expanded={formOpen}
+					aria-controls="account-form"
+				>
+					+ Add account
+				</button>
 			</section>
 			<dialog
 				ref={dialogRef}
@@ -224,81 +218,127 @@ export function AccountsView({
 							<span>Add an account to start tracking your balances.</span>
 						</div>
 					) : (
-						<div className="managed-account-grid" aria-busy={deletingId !== null}>
-							{sortedAccounts.map((account) => {
-								const accountBalance = account.balance ?? 0;
-								const isEditing = editing?.id === account.id;
+						<div className="account-type-groups" aria-busy={deletingId !== null}>
+							{accountGroups.map(({ type, accounts: groupAccounts }) => {
+								const groupBalance = groupAccounts.reduce(
+									(sum, account) => sum + (account.balance ?? 0),
+									0,
+								);
 
 								return (
-									<article
-										className={`managed-account-card${isEditing ? " is-editing" : ""}`}
-										key={account.id}
-										role="button"
-										tabIndex={0}
-										aria-label={`View transactions for ${account.name}`}
-										onClick={() => onAccountSelect(account.id)}
-										onKeyDown={(event) => {
-											if (event.key === "Enter" || event.key === " ") {
-												event.preventDefault();
-												onAccountSelect(account.id);
-											}
-										}}
-									>
-										<div className="account-card-header">
-											<div className="account-type-label">
-												<span
-													className={`account-type-mark ${account.type}`}
-													aria-hidden="true"
-												>
-													{accountTypeMark(account.type)}
+									<section className="account-type-group" key={type}>
+										<div className="account-type-group-heading">
+											<div>
+												<strong>{accountTypeLabel(type)}</strong>
+												<span>
+													{groupAccounts.length}{" "}
+													{groupAccounts.length === 1
+														? "account"
+														: "accounts"}
 												</span>
-												<span>{accountTypeLabel(account.type)}</span>
 											</div>
-											<div className="account-card-actions">
-												<button
-													type="button"
-													className="edit-button"
-													disabled={saving || deletingId !== null}
-													aria-label={`Edit ${account.name}`}
-													onClick={(event) => {
-														event.stopPropagation();
-														startEdit(account, event.currentTarget);
-													}}
-												>
-													Edit
-												</button>
-												<button
-													type="button"
-													className="delete-button"
-													disabled={
-														saving || deletingId !== null || isEditing
-													}
-													aria-label={`Delete ${account.name}`}
-													title={
-														isEditing
-															? "Cancel editing before deleting"
-															: undefined
-													}
-													onClick={(event) => {
-														event.stopPropagation();
-														onDelete(account);
-													}}
-												>
-													{deletingId === account.id
-														? "Deleting..."
-														: "Delete"}
-												</button>
+											<div className="account-type-group-total">
+												<span>Total balance</span>
+												<strong className={balanceTone(groupBalance)}>
+													{money(groupBalance)}
+												</strong>
 											</div>
 										</div>
-										<strong className="account-card-name" title={account.name}>
-											{account.name}
-										</strong>
-										<b
-											className={`account-balance ${balanceTone(accountBalance)}`}
-										>
-											{money(accountBalance)}
-										</b>
-									</article>
+										<div className="managed-account-grid">
+											{groupAccounts.map((account) => {
+												const accountBalance = account.balance ?? 0;
+												const isEditing = editing?.id === account.id;
+
+												return (
+													<article
+														className={`managed-account-card${isEditing ? " is-editing" : ""}`}
+														key={account.id}
+														role="button"
+														tabIndex={0}
+														aria-label={`View transactions for ${account.name}`}
+														onClick={() => onAccountSelect(account.id)}
+														onKeyDown={(event) => {
+															if (
+																event.key === "Enter" ||
+																event.key === " "
+															) {
+																event.preventDefault();
+																onAccountSelect(account.id);
+															}
+														}}
+													>
+														<div className="account-card-header">
+															<div className="account-type-label">
+																<span
+																	className={`account-type-mark ${account.type}`}
+																	aria-hidden="true"
+																>
+																	{accountTypeMark(account.type)}
+																</span>
+																<span>
+																	{accountTypeLabel(account.type)}
+																</span>
+															</div>
+															<strong
+																className="account-card-name"
+																title={account.name}
+															>
+																{account.name}
+															</strong>
+															<b
+																className={`account-balance ${balanceTone(accountBalance)}`}
+															>
+																{money(accountBalance)}
+															</b>
+															<div className="account-card-actions">
+																<button
+																	type="button"
+																	className="edit-button"
+																	disabled={
+																		saving ||
+																		deletingId !== null
+																	}
+																	aria-label={`Edit ${account.name}`}
+																	onClick={(event) => {
+																		event.stopPropagation();
+																		startEdit(
+																			account,
+																			event.currentTarget,
+																		);
+																	}}
+																>
+																	Edit
+																</button>
+																<button
+																	type="button"
+																	className="delete-button"
+																	disabled={
+																		saving ||
+																		deletingId !== null ||
+																		isEditing
+																	}
+																	aria-label={`Delete ${account.name}`}
+																	title={
+																		isEditing
+																			? "Cancel editing before deleting"
+																			: undefined
+																	}
+																	onClick={(event) => {
+																		event.stopPropagation();
+																		onDelete(account);
+																	}}
+																>
+																	{deletingId === account.id
+																		? "Deleting..."
+																		: "Delete"}
+																</button>
+															</div>
+														</div>
+													</article>
+												);
+											})}
+										</div>
+									</section>
 								);
 							})}
 						</div>

@@ -321,24 +321,29 @@ h3 {
 }
 .account-cards {
 	display: grid;
-	grid-template-columns: repeat(2, 1fr);
-	gap: 10px;
+	grid-template-columns: 1fr;
 }
 .account-card {
 	display: grid;
-	gap: 5px;
-	padding: 15px;
-	border: 1px solid #e6e4dc;
-	border-radius: 10px;
-	background: #fff;
+	grid-template-columns: minmax(82px, auto) minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 0;
+	border: 0;
+	border-top: 1px solid #ecebe5;
+	border-radius: 0;
+	background: transparent;
 	cursor: pointer;
 	transition:
 		border-color 150ms ease,
-		box-shadow 150ms ease;
+		background 150ms ease;
+}
+.account-card:first-child {
+	border-top: 0;
 }
 .account-card:hover {
 	border-color: #b8cabe;
-	box-shadow: 0 5px 16px rgba(32, 59, 49, 0.06);
+	background: #fafcf9;
 }
 .account-card:focus-visible,
 .managed-account-card:focus-visible {
@@ -350,15 +355,24 @@ h3 {
 	font-size: 11px;
 	text-transform: capitalize;
 }
+.account-card span {
+	color: #818a83;
+	font-size: 10px;
+}
 .account-card strong {
+	min-width: 0;
+	overflow: hidden;
 	color: #3d4941;
 	font-size: 13px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 .account-card b {
 	color: #203b31;
 	font:
-		600 19px Georgia,
+		600 16px Georgia,
 		serif;
+	white-space: nowrap;
 }
 .text-button {
 	padding: 0;
@@ -411,6 +425,13 @@ button:disabled {
 .account-page-heading {
 	align-items: end;
 	gap: 28px;
+}
+.account-toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 16px;
+	margin-bottom: 16px;
 }
 .transaction-page-heading {
 	align-items: end;
@@ -467,37 +488,90 @@ button:disabled {
 	outline: 3px solid #dfeae3;
 	outline-offset: 2px;
 }
+.account-type-groups {
+	display: grid;
+	gap: 22px;
+}
+.account-type-group {
+	min-width: 0;
+}
+.account-type-group-heading {
+	display: flex;
+	align-items: end;
+	justify-content: space-between;
+	gap: 16px;
+	padding-bottom: 8px;
+	border-bottom: 1px solid #deded6;
+}
+.account-type-group-heading > div:first-child {
+	display: grid;
+	gap: 3px;
+	min-width: 0;
+}
+.account-type-group-heading > div:first-child > strong {
+	color: #59635d;
+	font-size: 12px;
+}
+.account-type-group-heading > div:first-child > span,
+.account-type-group-total > span {
+	color: #929a93;
+	font-size: 10px;
+}
+.account-type-group-total {
+	display: flex;
+	align-items: baseline;
+	gap: 7px;
+	white-space: nowrap;
+}
+.account-type-group-total > strong {
+	font:
+		600 16px Georgia,
+		serif;
+}
+.account-type-group-total > strong.positive {
+	color: #203b31;
+}
+.account-type-group-total > strong.negative {
+	color: #b45c48;
+}
+.account-type-group-total > strong.zero {
+	color: #818a83;
+}
 .managed-account-grid {
 	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	gap: 12px;
+	grid-template-columns: 1fr;
 }
 .managed-account-card {
-	display: grid;
-	gap: 16px;
-	min-height: 146px;
-	padding: 18px;
-	border: 1px solid #e6e4dc;
-	border-radius: 12px;
-	background: #fff;
+	display: block;
+	padding: 11px 0;
+	border: 0;
+	border-top: 1px solid #ecebe5;
+	border-radius: 0;
+	background: transparent;
 	cursor: pointer;
 	transition:
 		border-color 150ms ease,
-		box-shadow 150ms ease;
+		background 150ms ease;
+}
+.managed-account-card:first-child {
+	border-top: 0;
 }
 .managed-account-card:hover {
 	border-color: #b8cabe;
-	box-shadow: 0 5px 16px rgba(32, 59, 49, 0.06);
+	background: #fafcf9;
 }
 .managed-account-card.is-editing {
 	border-color: #729683;
+	border: 1px solid #729683;
+	border-radius: 8px;
+	padding: 10px 11px;
 	background: #f7fbf8;
 	box-shadow: 0 0 0 3px #dfeae3;
 }
 .account-card-header {
-	display: flex;
+	display: grid;
+	grid-template-columns: minmax(104px, 0.8fr) minmax(0, 1.6fr) auto auto;
 	align-items: center;
-	justify-content: space-between;
 	gap: 12px;
 }
 .account-type-label {
@@ -547,9 +621,9 @@ button:disabled {
 }
 .managed-account-card .account-balance {
 	display: block;
-	margin-top: auto;
+	margin: 0;
 	font:
-		600 22px Georgia,
+		600 16px Georgia,
 		serif;
 	white-space: nowrap;
 }
@@ -1507,7 +1581,7 @@ footer {
 		padding: 20px;
 	}
 	.account-cards {
-		grid-template-columns: 1fr 1fr;
+		grid-template-columns: 1fr;
 	}
 	.delete-button {
 		font-size: 0;
@@ -1597,6 +1671,10 @@ footer {
 		flex-wrap: wrap;
 		gap: 18px;
 	}
+	.account-toolbar {
+		justify-content: flex-end;
+		gap: 14px;
+	}
 	.transaction-page-heading {
 		align-items: flex-start;
 		flex-wrap: wrap;
@@ -1613,8 +1691,11 @@ footer {
 		grid-template-columns: 1fr;
 	}
 	.managed-account-card {
-		min-height: 132px;
-		padding: 16px;
+		padding: 10px 0;
+	}
+	.account-card-header {
+		grid-template-columns: minmax(90px, 0.8fr) minmax(0, 1.4fr) auto auto;
+		gap: 10px;
 	}
 	.account-card-actions .delete-button::after,
 	.category-card-actions .delete-button::after {
@@ -1691,6 +1772,33 @@ footer {
 		min-height: 36px;
 		padding: 7px 11px;
 		font-size: 11px;
+	}
+	.account-card-header {
+		grid-template-columns: 26px minmax(0, 1fr) auto auto;
+		gap: 7px;
+	}
+	.account-type-label {
+		gap: 0;
+	}
+	.account-type-label > span:last-child {
+		display: none;
+	}
+	.account-card-name {
+		font-size: 13px;
+	}
+	.managed-account-card .account-balance {
+		font-size: 14px;
+	}
+	.account-card-actions {
+		gap: 3px;
+	}
+	.account-card-actions .edit-button,
+	.account-card-actions .delete-button {
+		min-width: 38px;
+		padding-inline: 6px;
+	}
+	.account-card-actions .delete-button {
+		font-size: 10px;
 	}
 	.stats {
 		grid-template-columns: repeat(3, minmax(0, 1fr));
