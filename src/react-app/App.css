@@ -754,6 +754,14 @@ button:disabled {
 	gap: 20px;
 	padding: 15px 0;
 	border-bottom: 1px solid #ecebe5;
+	cursor: pointer;
+}
+.report-row:hover {
+	background: #fafcf9;
+}
+.report-row:focus-visible {
+	outline: 3px solid #dfeae3;
+	outline-offset: 2px;
 }
 .report-row > div {
 	flex: 1;

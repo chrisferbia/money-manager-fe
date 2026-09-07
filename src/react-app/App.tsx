@@ -22,6 +22,7 @@ import type {
 } from "./types";
 
 function App() {
+	const [view, setView] = useState<View>("dashboard");
 	const {
 		accounts,
 		categories,
@@ -35,8 +36,7 @@ function App() {
 		initialLoading,
 		refresh,
 		refreshAccounts,
-	} = useMoneyManagerData();
-	const [view, setView] = useState<View>("dashboard");
+	} = useMoneyManagerData(view);
 	const [entry, setEntry] = useState<EntryForm>(blankEntry());
 	const [editing, setEditing] = useState<Transaction | null>(null);
 	const [accountDraft, setAccountDraft] = useState({ name: "", type: "cash" });
@@ -100,6 +100,16 @@ function App() {
 	}
 	function openAccountTransactions(accountId: number) {
 		setFilters({ account: String(accountId), type: "", category: "", from: "", to: "" });
+		selectView("transactions");
+	}
+	function openCategoryTransactions(categoryId: number) {
+		setFilters({
+			account: "",
+			type: "",
+			category: String(categoryId),
+			from: filters.from,
+			to: filters.to,
+		});
 		selectView("transactions");
 	}
 
@@ -176,6 +186,7 @@ function App() {
 					toDate={filters.to}
 					setFromDate={(value) => setFilters({ ...filters, from: value })}
 					setToDate={(value) => setFilters({ ...filters, to: value })}
+					onCategorySelect={openCategoryTransactions}
 				/>
 			)}
 			{view === "settings" && (

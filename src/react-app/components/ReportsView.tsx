@@ -7,6 +7,7 @@ type ReportsViewProps = {
 	toDate: string;
 	setFromDate: (value: string) => void;
 	setToDate: (value: string) => void;
+	onCategorySelect: (categoryId: number) => void;
 };
 
 export function ReportsView({
@@ -16,6 +17,7 @@ export function ReportsView({
 	toDate,
 	setFromDate,
 	setToDate,
+	onCategorySelect,
 }: ReportsViewProps) {
 	const largest = Math.max(...report.map((item) => item.total), 1);
 	return (
@@ -58,7 +60,20 @@ export function ReportsView({
 				{report.length ? (
 					<div className="report-list">
 						{report.map((item) => (
-							<div className="report-row" key={item.id}>
+							<div
+								className="report-row"
+								key={item.id}
+								role="button"
+								tabIndex={0}
+								aria-label={`View transactions for ${item.name}`}
+								onClick={() => onCategorySelect(item.id)}
+								onKeyDown={(event) => {
+									if (event.key === "Enter" || event.key === " ") {
+										event.preventDefault();
+										onCategorySelect(item.id);
+									}
+								}}
+							>
 								<div>
 									<strong>{item.name}</strong>
 									<div className="progress-track">

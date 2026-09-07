@@ -78,24 +78,22 @@ export function AppShell({
 						{notice}
 					</div>
 				)}
-				{initialLoading ? (
+				{loading ? (
 					<div className="loading-state" role="status" aria-live="polite">
 						<span className="loading-spinner" aria-hidden="true" />
 						<div>
-							<strong>Loading your ledger</strong>
-							<span>Fetching accounts, transactions, and reports...</span>
+							<strong>
+								{initialLoading ? "Loading your ledger" : "Refreshing your ledger"}
+							</strong>
+							<span>
+								{initialLoading
+									? "Fetching accounts, transactions, and reports..."
+									: "Loading the selected data..."}
+							</span>
 						</div>
 					</div>
 				) : (
-					<>
-						{loading && (
-							<div className="loading-bar" role="status" aria-live="polite">
-								<span className="loading-spinner" aria-hidden="true" />
-								<span>Refreshing data...</span>
-							</div>
-						)}
-						{children}
-					</>
+					children
 				)}
 			</main>
 			<footer>Data is managed by your Money Manager backend.</footer>

@@ -22,7 +22,7 @@ import {
 
 type ActionDependencies = {
 	filters: DashboardFilters;
-	refresh: () => Promise<void>;
+	refresh: (force?: boolean) => Promise<void>;
 	refreshAccounts: () => Promise<void>;
 	setError: (message: string) => void;
 	setNotice: (message: string) => void;
@@ -223,7 +223,7 @@ export function useMoneyManagerActions({
 			setEditingCategory(null);
 			setError("");
 			setNotice(wasEditing ? "Category renamed." : "Category added.");
-			await refresh();
+			await refresh(true);
 			return true;
 		} catch (reason) {
 			setError(errorMessage(reason, "Could not save category."));
@@ -244,7 +244,7 @@ export function useMoneyManagerActions({
 		try {
 			await request<void>(`/categories/${category.id}`, { method: "DELETE" });
 			setNotice("Category deleted.");
-			await refresh();
+			await refresh(true);
 		} catch (reason) {
 			setError(errorMessage(reason, "Could not delete category."));
 		} finally {
