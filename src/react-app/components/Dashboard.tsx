@@ -32,15 +32,13 @@ export function Dashboard({
 	return (
 		<>
 			<section className="hero">
-				<div>
-					<p className="eyebrow">OVERVIEW</p>
-				</div>
-				<div className="balance">
-					<span>Total balance</span>
-					<strong>{money(balance)}</strong>
-				</div>
+				<p className="eyebrow">OVERVIEW</p>
 			</section>
 			<section className="stats">
+				<div className="stat-card total-balance-stat">
+					<span className="stat-label">Total balance</span>
+					<strong>{money(balance)}</strong>
+				</div>
 				<div className="stat-card">
 					<span className="stat-label">Income</span>
 					<strong className="income">{money(income)}</strong>

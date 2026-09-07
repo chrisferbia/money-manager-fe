@@ -187,6 +187,7 @@ function App() {
 					incomeCategories={incomeCategories}
 					money={money}
 					openAddRequest={addTransactionRequest}
+					onAddRequestHandled={() => setAddTransactionRequest(0)}
 					onSave={(event) => actions.saveEntry(event, entry, editing)}
 					onEdit={actions.editTransaction}
 					onDelete={actions.deleteTransaction}

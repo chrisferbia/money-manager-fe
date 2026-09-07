@@ -81,11 +81,6 @@ h3 {
 	padding: 6px 8px;
 	font-size: 11px;
 }
-.filter-summary {
-	padding: 10px 0;
-	color: #929a93;
-	font-size: 11px;
-}
 .main-nav {
 	display: flex;
 	gap: 5px;
@@ -1051,22 +1046,26 @@ small {
 }
 .stats {
 	display: grid;
-	grid-template-columns: repeat(2, 1fr);
+	grid-template-columns: repeat(3, minmax(0, 1fr));
 	gap: 14px;
 	margin-bottom: 30px;
 }
 .stat-card {
-	padding: 20px 22px;
+	padding: 15px 17px;
 	border: 1px solid #e2e0d8;
 	border-radius: 14px;
 	background: rgba(255, 255, 255, 0.48);
 }
 .stat-card strong {
 	display: block;
-	margin: 10px 0 5px;
+	margin: 6px 0 3px;
 	font:
-		600 25px Georgia,
+		600 clamp(16px, 2.2vw, 22px) Georgia,
 		serif;
+	white-space: nowrap;
+}
+.total-balance-stat strong {
+	color: #203b31;
 }
 .income {
 	color: #277159;
@@ -1694,13 +1693,22 @@ footer {
 		font-size: 11px;
 	}
 	.stats {
-		grid-template-columns: 1fr;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 6px;
 	}
 	.stat-card {
-		padding: 16px;
+		padding: 11px 8px;
+		border-radius: 10px;
 	}
 	.stat-card strong {
-		font-size: 22px;
+		font-size: clamp(12px, 4vw, 17px);
+	}
+	.stat-card .stat-label {
+		font-size: 10px;
+		white-space: nowrap;
+	}
+	.stat-card small {
+		display: none;
 	}
 	.panel {
 		padding: 16px;
@@ -1727,10 +1735,12 @@ footer {
 		grid-column: auto;
 	}
 	.filter-toggle-row {
-		justify-content: stretch;
+		justify-content: flex-end;
 	}
 	.filter-toggle {
-		width: 100%;
+		width: auto;
+		min-height: 34px;
+		padding: 7px 11px;
 		justify-content: center;
 	}
 	.transaction-page-heading > .primary-button,

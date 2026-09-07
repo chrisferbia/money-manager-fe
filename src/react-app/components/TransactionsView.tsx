@@ -25,6 +25,7 @@ type TransactionsViewProps = {
 	editing: Transaction | null;
 	saving: boolean;
 	openAddRequest: number;
+	onAddRequestHandled: () => void;
 	expenseCategories: Category[];
 	incomeCategories: Category[];
 	money: MoneyFormatter;
@@ -49,6 +50,7 @@ export function TransactionsView({
 	editing,
 	saving,
 	openAddRequest,
+	onAddRequestHandled,
 	expenseCategories,
 	incomeCategories,
 	money,
@@ -120,51 +122,14 @@ export function TransactionsView({
 	useEffect(() => {
 		if (openAddRequest === 0 || openAddRequest <= handledAddRequestRef.current) return;
 		handledAddRequestRef.current = openAddRequest;
+		onAddRequestHandled();
 		returnFocusRef.current = document.querySelector<HTMLElement>(".floating-add-button");
 		onCancelRef.current();
 		setFormOpen(true);
-	}, [openAddRequest]);
+	}, [onAddRequestHandled, openAddRequest]);
 
 	return (
 		<>
-			<section className="page-heading transaction-page-heading">
-				<div>
-					<p className="eyebrow">LEDGER</p>
-					<h2>Transactions</h2>
-					<p className="muted">
-						Record, edit, filter, and remove activity across your accounts.
-					</p>
-				</div>
-			</section>
-			<div className="filter-toggle-row">
-				<button
-					className="filter-toggle"
-					type="button"
-					aria-expanded={filtersOpen}
-					aria-controls="transaction-filters"
-					onClick={() => setFiltersOpen((open) => !open)}
-				>
-					{filtersOpen ? "Hide filters" : "Show filters"}
-					{activeFilterCount > 0 && (
-						<span className="filter-count">{activeFilterCount}</span>
-					)}
-				</button>
-			</div>
-			{filtersOpen && (
-				<div id="transaction-filters">
-					<TransactionFilters
-						accounts={accounts}
-						categories={categories}
-						filters={filters}
-						setFilters={setFilters}
-					/>
-				</div>
-			)}
-			<div className="filter-summary">
-				{hasFilters
-					? "Showing results for the selected filters."
-					: "Showing all transactions."}
-			</div>
 			<dialog
 				ref={dialogRef}
 				className="transaction-dialog"
@@ -205,13 +170,35 @@ export function TransactionsView({
 				</section>
 			</dialog>
 			<section className="panel transactions-panel transaction-history-panel">
-				<div className="panel-heading">
+				<div className="panel-heading transaction-history-heading">
 					<div>
 						<p className="eyebrow">HISTORY</p>
 						<h3>Transaction history</h3>
 						<p className="transaction-result-count">{transactionResultLabel}</p>
 					</div>
+					<button
+						className="filter-toggle"
+						type="button"
+						aria-expanded={filtersOpen}
+						aria-controls="transaction-filters"
+						onClick={() => setFiltersOpen((open) => !open)}
+					>
+						{filtersOpen ? "Hide filters" : "Show filters"}
+						{activeFilterCount > 0 && (
+							<span className="filter-count">{activeFilterCount}</span>
+						)}
+					</button>
 				</div>
+				{filtersOpen && (
+					<div id="transaction-filters">
+						<TransactionFilters
+							accounts={accounts}
+							categories={categories}
+							filters={filters}
+							setFilters={setFilters}
+						/>
+					</div>
+				)}
 				<TransactionRows
 					transactions={visibleTransactions}
 					accountNames={accountNames}
