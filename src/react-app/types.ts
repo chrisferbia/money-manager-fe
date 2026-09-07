@@ -6,6 +6,7 @@ export type Account = {
 	id: number;
 	name: string;
 	type: string;
+	sequence: number;
 	created_at: string;
 	balance?: number;
 };
@@ -14,6 +15,7 @@ export type Category = {
 	id: number;
 	name: string;
 	type: "income" | "expense";
+	sequence: number;
 	created_at: string;
 };
 
@@ -51,6 +53,13 @@ export type EntryForm = {
 export type CategoryDraft = {
 	name: string;
 	type: "income" | "expense";
+	sequence: string;
+};
+
+export type AccountDraft = {
+	name: string;
+	type: string;
+	sequence: string;
 };
 
 export type DashboardFilters = {

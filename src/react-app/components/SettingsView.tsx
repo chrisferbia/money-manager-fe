@@ -44,19 +44,15 @@ export function SettingsView({
 	const returnFocusRef = useRef<HTMLButtonElement | null>(null);
 	const expenses = categories
 		.filter((category) => category.type === "expense")
-		.sort((left, right) =>
-			left.name.localeCompare(right.name, undefined, { sensitivity: "base" }),
-		);
+		.sort((left, right) => left.sequence - right.sequence || left.id - right.id);
 	const income = categories
 		.filter((category) => category.type === "income")
-		.sort((left, right) =>
-			left.name.localeCompare(right.name, undefined, { sensitivity: "base" }),
-		);
+		.sort((left, right) => left.sequence - right.sequence || left.id - right.id);
 	const visibleExpenses = expandedGroups.expense ? expenses : expenses.slice(0, 4);
 	const visibleIncome = expandedGroups.income ? income : income.slice(0, 4);
 	const resetForm = () => {
 		setEditing(null);
-		setDraft({ name: "", type: "expense" });
+		setDraft({ name: "", type: "expense", sequence: "" });
 		setFormOpen(false);
 	};
 	const closeForm = () => {
@@ -66,7 +62,7 @@ export function SettingsView({
 	const openAddForm = () => {
 		returnFocusRef.current = addButtonRef.current;
 		setEditing(null);
-		setDraft({ name: "", type: "expense" });
+		setDraft({ name: "", type: "expense", sequence: "" });
 		setFormOpen(true);
 	};
 	const handleSave = async (event: FormEvent<HTMLFormElement>) => {
@@ -75,7 +71,11 @@ export function SettingsView({
 	const startEdit = (category: Category, trigger: HTMLButtonElement) => {
 		returnFocusRef.current = trigger;
 		setEditing(category);
-		setDraft({ name: category.name, type: category.type });
+		setDraft({
+			name: category.name,
+			type: category.type,
+			sequence: String(category.sequence),
+		});
 		setFormOpen(true);
 		setExpandedGroups((current) => ({ ...current, [category.type]: true }));
 	};
@@ -215,6 +215,24 @@ export function SettingsView({
 										<option value="expense">Expense</option>
 										<option value="income">Income</option>
 									</select>
+								</label>
+							)}
+							{editing && (
+								<label>
+									Display order{" "}
+									<span className="optional">(lower comes first)</span>
+									<input
+										type="number"
+										min="1"
+										max={categories.length}
+										step="1"
+										required
+										value={draft.sequence}
+										onChange={(event) =>
+											setDraft({ ...draft, sequence: event.target.value })
+										}
+										inputMode="numeric"
+									/>
 								</label>
 							)}
 							<button

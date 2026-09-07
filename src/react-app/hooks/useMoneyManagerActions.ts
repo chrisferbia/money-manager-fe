@@ -2,6 +2,7 @@ import { useState, type Dispatch, type FormEvent, type SetStateAction } from "re
 import { request } from "../api/client";
 import type {
 	Account,
+	AccountDraft,
 	Category,
 	CategoryDraft,
 	DashboardFilters,
@@ -21,6 +22,7 @@ import {
 } from "../utils/transactions";
 
 type ActionDependencies = {
+	accounts: Account[];
 	filters: DashboardFilters;
 	refresh: (force?: boolean) => Promise<void>;
 	refreshAccounts: () => Promise<void>;
@@ -30,13 +32,14 @@ type ActionDependencies = {
 	setView: Dispatch<SetStateAction<View>>;
 	setEntry: Dispatch<SetStateAction<EntryForm>>;
 	setEditing: Dispatch<SetStateAction<Transaction | null>>;
-	setAccountDraft: Dispatch<SetStateAction<{ name: string; type: string }>>;
+	setAccountDraft: Dispatch<SetStateAction<AccountDraft>>;
 	setEditingAccount: Dispatch<SetStateAction<Account | null>>;
 	setCategoryDraft: Dispatch<SetStateAction<CategoryDraft>>;
 	setEditingCategory: Dispatch<SetStateAction<Category | null>>;
 };
 
 export function useMoneyManagerActions({
+	accounts,
 	filters,
 	refresh,
 	refreshAccounts,
@@ -56,7 +59,7 @@ export function useMoneyManagerActions({
 
 	function resetEntry() {
 		setEditing(null);
-		setEntry(blankEntry(filters.account));
+		setEntry(blankEntry(filters.account || String(accounts[0]?.id ?? "")));
 	}
 
 	async function saveEntry(
@@ -127,7 +130,7 @@ export function useMoneyManagerActions({
 
 	async function saveAccount(
 		event: FormEvent<HTMLFormElement>,
-		draft: { name: string; type: string },
+		draft: AccountDraft,
 		editing: Account | null,
 	): Promise<boolean> {
 		event.preventDefault();
@@ -144,10 +147,17 @@ export function useMoneyManagerActions({
 			setError("Choose a valid account type.");
 			return false;
 		}
+		const sequence = Number(draft.sequence);
+		if (editing && (!Number.isInteger(sequence) || sequence < 1)) {
+			setError("Display order must be a positive whole number.");
+			return false;
+		}
 		setSaving(true);
 		try {
 			const wasEditing = Boolean(editing);
-			const payload = { name, type: draft.type };
+			const payload = editing
+				? { name, type: draft.type, sequence }
+				: { name, type: draft.type };
 			if (editing)
 				await request<Account>(`/accounts/${editing.id}`, {
 					method: "PATCH",
@@ -158,7 +168,7 @@ export function useMoneyManagerActions({
 					method: "POST",
 					body: JSON.stringify(payload),
 				});
-			setAccountDraft({ name: "", type: "cash" });
+			setAccountDraft({ name: "", type: "cash", sequence: "" });
 			setEditingAccount(null);
 			setError("");
 			setNotice(wasEditing ? "Account updated." : "Account added.");
@@ -206,23 +216,28 @@ export function useMoneyManagerActions({
 			setError(`Category name must be ${categoryNameMaxLength} characters or fewer.`);
 			return false;
 		}
+		const sequence = Number(draft.sequence);
+		if (editing && (!Number.isInteger(sequence) || sequence < 1)) {
+			setError("Display order must be a positive whole number.");
+			return false;
+		}
 		setSaving(true);
 		try {
 			const wasEditing = Boolean(editing);
 			if (editing)
 				await request<Category>(`/categories/${editing.id}`, {
 					method: "PATCH",
-					body: JSON.stringify({ name }),
+					body: JSON.stringify({ name, sequence }),
 				});
 			else
 				await request<Category>("/categories", {
 					method: "POST",
 					body: JSON.stringify({ name, type: draft.type }),
 				});
-			setCategoryDraft({ name: "", type: "expense" });
+			setCategoryDraft({ name: "", type: "expense", sequence: "" });
 			setEditingCategory(null);
 			setError("");
-			setNotice(wasEditing ? "Category renamed." : "Category added.");
+			setNotice(wasEditing ? "Category updated." : "Category added.");
 			await refresh(true);
 			return true;
 		} catch (reason) {

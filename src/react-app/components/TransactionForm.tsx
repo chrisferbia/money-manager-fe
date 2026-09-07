@@ -149,19 +149,19 @@ export function TransactionForm({
 				</label>
 			</div>
 			<label>
-				Counterparty <span className="optional">(optional)</span>
-				<input
-					value={entry.counterparty}
-					onChange={(event) => update({ counterparty: event.target.value })}
-					placeholder="Merchant, employer, or person"
-				/>
-			</label>
-			<label>
 				Description <span className="optional">(optional)</span>
 				<input
 					value={entry.description}
 					onChange={(event) => update({ description: event.target.value })}
 					placeholder="What was this for?"
+				/>
+			</label>
+			<label>
+				Counterparty <span className="optional">(optional)</span>
+				<input
+					value={entry.counterparty}
+					onChange={(event) => update({ counterparty: event.target.value })}
+					placeholder="Merchant, employer, or person"
 				/>
 			</label>
 			<button className="submit-button" type="submit" disabled={saving}>

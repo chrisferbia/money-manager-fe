@@ -34,10 +34,6 @@ export function Dashboard({
 			<section className="hero">
 				<div>
 					<p className="eyebrow">OVERVIEW</p>
-					<h2>Your money, made clear.</h2>
-					<p className="muted">
-						A live view of every account and transaction in your ledger.
-					</p>
 				</div>
 				<div className="balance">
 					<span>Total balance</span>
@@ -45,11 +41,6 @@ export function Dashboard({
 				</div>
 			</section>
 			<section className="stats">
-				<div className="stat-card">
-					<span className="stat-label">Accounts</span>
-					<strong>{accounts.length}</strong>
-					<small>Tracked accounts</small>
-				</div>
 				<div className="stat-card">
 					<span className="stat-label">Income</span>
 					<strong className="income">{money(income)}</strong>

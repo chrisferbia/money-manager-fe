@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 import { useMoneyManagerData } from "./hooks/useMoneyManagerData";
 import { useMoneyManagerActions } from "./hooks/useMoneyManagerActions";
@@ -13,6 +13,7 @@ import { blankEntry } from "./utils/forms";
 import { createNameMaps } from "./utils/maps";
 import type {
 	Account,
+	AccountDraft,
 	Category,
 	CategoryDraft,
 	DisplayCurrency,
@@ -21,8 +22,16 @@ import type {
 	View,
 } from "./types";
 
+const viewIds: View[] = ["dashboard", "transactions", "accounts", "reports", "settings"];
+
+function readViewFromHash(): View {
+	if (typeof window === "undefined") return "dashboard";
+	const candidate = window.location.hash.slice(1) as View;
+	return viewIds.includes(candidate) ? candidate : "dashboard";
+}
+
 function App() {
-	const [view, setView] = useState<View>("dashboard");
+	const [view, setView] = useState<View>(readViewFromHash);
 	const {
 		accounts,
 		categories,
@@ -39,11 +48,16 @@ function App() {
 	} = useMoneyManagerData(view);
 	const [entry, setEntry] = useState<EntryForm>(blankEntry());
 	const [editing, setEditing] = useState<Transaction | null>(null);
-	const [accountDraft, setAccountDraft] = useState({ name: "", type: "cash" });
+	const [accountDraft, setAccountDraft] = useState<AccountDraft>({
+		name: "",
+		type: "cash",
+		sequence: "",
+	});
 	const [editingAccount, setEditingAccount] = useState<Account | null>(null);
 	const [categoryDraft, setCategoryDraft] = useState<CategoryDraft>({
 		name: "",
 		type: "expense",
+		sequence: "",
 	});
 	const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 	const [currency, setCurrency] = useState<DisplayCurrency>(() =>
@@ -68,6 +82,7 @@ function App() {
 	const balance = accounts.reduce((sum, item) => sum + (item.balance ?? 0), 0);
 	const money = createMoneyFormatter(currency);
 	const actions = useMoneyManagerActions({
+		accounts,
 		filters,
 		refresh,
 		refreshAccounts,
@@ -83,8 +98,24 @@ function App() {
 		setEditingCategory,
 	});
 
+	useEffect(() => {
+		const handleLocationChange = () => {
+			setView(readViewFromHash());
+			setError("");
+			setNotice("");
+		};
+		window.addEventListener("hashchange", handleLocationChange);
+		window.addEventListener("popstate", handleLocationChange);
+		return () => {
+			window.removeEventListener("hashchange", handleLocationChange);
+			window.removeEventListener("popstate", handleLocationChange);
+		};
+	}, [setError, setNotice]);
+
 	function selectView(next: View) {
 		setView(next);
+		if (typeof window !== "undefined" && window.location.hash !== `#${next}`)
+			window.location.hash = next;
 		setError("");
 		setNotice("");
 	}
@@ -95,7 +126,7 @@ function App() {
 	function openTransactionComposer() {
 		setError("");
 		setNotice("");
-		setView("transactions");
+		selectView("transactions");
 		setAddTransactionRequest((request) => request + 1);
 	}
 	function openAccountTransactions(accountId: number) {

@@ -6,7 +6,7 @@ import {
 	type FormEvent,
 	type SetStateAction,
 } from "react";
-import type { Account, MoneyFormatter } from "../types";
+import type { Account, AccountDraft, MoneyFormatter } from "../types";
 import {
 	accountNameMaxLength,
 	accountTypeLabel,
@@ -18,8 +18,8 @@ type AccountsViewProps = {
 	accounts: Account[];
 	loading: boolean;
 	money: MoneyFormatter;
-	draft: { name: string; type: string };
-	setDraft: Dispatch<SetStateAction<{ name: string; type: string }>>;
+	draft: AccountDraft;
+	setDraft: Dispatch<SetStateAction<AccountDraft>>;
 	editing: Account | null;
 	setEditing: Dispatch<SetStateAction<Account | null>>;
 	saving: boolean;
@@ -54,12 +54,12 @@ export function AccountsView({
 	const returnFocusRef = useRef<HTMLButtonElement | null>(null);
 	const totalBalance = accounts.reduce((sum, account) => sum + (account.balance ?? 0), 0);
 	const accountCountLabel = `${accounts.length} ${accounts.length === 1 ? "account" : "accounts"}`;
-	const sortedAccounts = [...accounts].sort((left, right) =>
-		left.name.localeCompare(right.name, undefined, { sensitivity: "base" }),
+	const sortedAccounts = [...accounts].sort(
+		(left, right) => left.sequence - right.sequence || left.id - right.id,
 	);
 	const resetForm = () => {
 		setEditing(null);
-		setDraft({ name: "", type: "cash" });
+		setDraft({ name: "", type: "cash", sequence: "" });
 		setFormOpen(false);
 	};
 	const closeForm = () => {
@@ -69,7 +69,7 @@ export function AccountsView({
 	const openAddForm = () => {
 		returnFocusRef.current = addButtonRef.current;
 		setEditing(null);
-		setDraft({ name: "", type: "cash" });
+		setDraft({ name: "", type: "cash", sequence: "" });
 		setFormOpen(true);
 	};
 	const handleSave = async (event: FormEvent<HTMLFormElement>) => {
@@ -78,7 +78,11 @@ export function AccountsView({
 	const startEdit = (account: Account, trigger: HTMLButtonElement) => {
 		returnFocusRef.current = trigger;
 		setEditing(account);
-		setDraft({ name: account.name, type: account.type });
+		setDraft({
+			name: account.name,
+			type: account.type,
+			sequence: String(account.sequence),
+		});
 		setFormOpen(true);
 	};
 
@@ -169,6 +173,23 @@ export function AccountsView({
 								))}
 							</select>
 						</label>
+						{editing && (
+							<label>
+								Display order <span className="optional">(lower comes first)</span>
+								<input
+									type="number"
+									min="1"
+									max={accounts.length}
+									step="1"
+									required
+									value={draft.sequence}
+									onChange={(event) =>
+										setDraft({ ...draft, sequence: event.target.value })
+									}
+									inputMode="numeric"
+								/>
+							</label>
+						)}
 						<button className="submit-button" disabled={saving || deletingId !== null}>
 							{saving ? "Saving..." : editing ? "Save account" : "Add account"}
 						</button>
