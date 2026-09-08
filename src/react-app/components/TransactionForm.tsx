@@ -58,7 +58,6 @@ export function TransactionForm({
 				Account
 				<select
 					value={entry.accountId}
-					disabled={Boolean(editing)}
 					required
 					onChange={(event) => update({ accountId: event.target.value })}
 				>
@@ -117,11 +116,6 @@ export function TransactionForm({
 					<strong>{editing.transaction_subtype?.trim() || "-"}</strong>
 					<small>Read-only transaction metadata.</small>
 				</div>
-			)}
-			{editing && entry.type === "transfer" && (
-				<p className="form-note">
-					The source account cannot be changed while editing a transfer.
-				</p>
 			)}
 			<div className="form-row">
 				<label>

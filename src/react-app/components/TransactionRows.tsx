@@ -9,6 +9,7 @@ type TransactionRowContext = {
 
 type TransactionRowsProps = TransactionRowContext & {
 	transactions: Transaction[];
+	groupByCreatedAt?: boolean;
 	emptyTitle?: string;
 	emptyDescription?: string;
 };
@@ -27,6 +28,7 @@ export function TransactionRows({
 	categoryNames,
 	money,
 	onEdit,
+	groupByCreatedAt = false,
 	emptyTitle = "No transactions yet",
 	emptyDescription = "Add an income, expense, or transfer to see activity here.",
 }: TransactionRowsProps) {
@@ -40,7 +42,9 @@ export function TransactionRows({
 
 	const groups = new Map<string, Transaction[]>();
 	for (const transaction of transactions) {
-		const dateLabel = formatTransactionDate(transaction.occurred_at);
+		const dateLabel = formatTransactionDate(
+			groupByCreatedAt ? transaction.created_at : transaction.occurred_at,
+		);
 		const group = groups.get(dateLabel) ?? [];
 		group.push(transaction);
 		groups.set(dateLabel, group);
@@ -50,7 +54,9 @@ export function TransactionRows({
 		<div className="transaction-list">
 			{Array.from(groups, ([dateLabel, group]) => (
 				<section className="transaction-date-group" key={dateLabel}>
-					<h4 className="transaction-date-heading">{dateLabel}</h4>
+					<h4 className="transaction-date-heading">
+						{groupByCreatedAt ? `Added ${dateLabel}` : dateLabel}
+					</h4>
 					<div className="transaction-date-list">
 						{group.map((transaction) => (
 							<TransactionRow

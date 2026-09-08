@@ -1,4 +1,4 @@
-import type { EntryForm, Transaction } from "../types";
+import type { EntryForm, Transaction, TransactionSort } from "../types";
 
 export function validateEntry(entry: EntryForm): string | null {
 	const amount = Math.round(Number(entry.amount));
@@ -56,6 +56,7 @@ export function createTransferPayload(entry: EntryForm) {
 export function updateTransactionPayload(entry: EntryForm) {
 	return {
 		type: entry.type,
+		account_id: Number(entry.accountId),
 		related_account_id:
 			entry.type === "transfer" && entry.destinationId ? Number(entry.destinationId) : null,
 		...commonTransactionPayload(entry),
@@ -65,11 +66,20 @@ export function updateTransactionPayload(entry: EntryForm) {
 	};
 }
 
-export function sortTransactions(transactions: Transaction[]) {
+export function sortTransactions(
+	transactions: Transaction[],
+	sort: TransactionSort = "occurred-desc",
+) {
+	const [field, direction] = sort.split("-") as ["occurred" | "created", "asc" | "desc"];
+	const dateField = field === "occurred" ? "occurred_at" : "created_at";
+	const fallbackField = field === "occurred" ? "created_at" : "occurred_at";
+	const multiplier = direction === "asc" ? 1 : -1;
+
 	return [...transactions].sort(
 		(left, right) =>
-			Date.parse(right.occurred_at) - Date.parse(left.occurred_at) ||
-			Date.parse(right.created_at) - Date.parse(left.created_at),
+			multiplier * (Date.parse(left[dateField]) - Date.parse(right[dateField])) ||
+			multiplier * (Date.parse(left[fallbackField]) - Date.parse(right[fallbackField])) ||
+			multiplier * (left.id - right.id),
 	);
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type {
 	Account,
 	Category,
@@ -6,7 +6,9 @@ import type {
 	EntryForm,
 	MoneyFormatter,
 	Transaction,
+	TransactionSort,
 } from "../types";
+import { sortTransactions } from "../utils/transactions";
 import { TransactionFilters } from "./TransactionFilters";
 import { TransactionForm } from "./TransactionForm";
 import { TransactionRows } from "./TransactionRows";
@@ -24,6 +26,8 @@ type TransactionsViewProps = {
 	setEntry: Dispatch<SetStateAction<EntryForm>>;
 	editing: Transaction | null;
 	saving: boolean;
+	sort: TransactionSort;
+	onSortChange: (sort: TransactionSort) => void;
 	openAddRequest: number;
 	onAddRequestHandled: () => void;
 	expenseCategories: Category[];
@@ -49,6 +53,8 @@ export function TransactionsView({
 	setEntry,
 	editing,
 	saving,
+	sort,
+	onSortChange,
 	openAddRequest,
 	onAddRequestHandled,
 	expenseCategories,
@@ -60,17 +66,18 @@ export function TransactionsView({
 	onCancel,
 }: TransactionsViewProps) {
 	const hasFilters = Object.values(filters).some(Boolean);
-	const filterKey = JSON.stringify(filters);
+	const sortedTransactions = useMemo(() => sortTransactions(transactions, sort), [sort, transactions]);
+	const filterKey = JSON.stringify({ filters, sort });
 	const [pagination, setPagination] = useState({
 		filterKey: "",
 		visibleCount: transactionsPageSize,
 	});
 	const visibleTransactionCount =
 		pagination.filterKey === filterKey ? pagination.visibleCount : transactionsPageSize;
-	const visibleTransactions = transactions.slice(0, visibleTransactionCount);
-	const transactionCountLabel = `${transactions.length} transaction${transactions.length === 1 ? "" : "s"}`;
+	const visibleTransactions = sortedTransactions.slice(0, visibleTransactionCount);
+	const transactionCountLabel = `${sortedTransactions.length} transaction${sortedTransactions.length === 1 ? "" : "s"}`;
 	const transactionResultLabel =
-		visibleTransactions.length < transactions.length
+		visibleTransactions.length < sortedTransactions.length
 			? `Showing ${visibleTransactions.length} of ${transactionCountLabel}`
 			: transactionCountLabel;
 	const activeFilterCount = Object.values(filters).filter(Boolean).length;
@@ -80,6 +87,7 @@ export function TransactionsView({
 	const dialogRef = useRef<HTMLDialogElement>(null);
 	const returnFocusRef = useRef<HTMLElement | null>(null);
 	const handledAddRequestRef = useRef(0);
+	const pendingAddRequestRef = useRef<number | null>(null);
 	const onCancelRef = useRef(onCancel);
 	onCancelRef.current = onCancel;
 	const openEditForm = (transaction: Transaction, trigger?: HTMLElement) => {
@@ -109,6 +117,10 @@ export function TransactionsView({
 		const dialog = dialogRef.current;
 		if (!dialog) return;
 		if (formOpen && !dialog.open) dialog.showModal();
+		if (formOpen && pendingAddRequestRef.current !== null) {
+			pendingAddRequestRef.current = null;
+			onAddRequestHandled();
+		}
 		if (!formOpen && dialog.open) dialog.close();
 		if (formOpen) {
 			window.requestAnimationFrame(() =>
@@ -117,16 +129,16 @@ export function TransactionsView({
 					?.focus(),
 			);
 		}
-	}, [formOpen, editing]);
+	}, [formOpen, editing, onAddRequestHandled]);
 
 	useEffect(() => {
 		if (openAddRequest === 0 || openAddRequest <= handledAddRequestRef.current) return;
 		handledAddRequestRef.current = openAddRequest;
-		onAddRequestHandled();
+		pendingAddRequestRef.current = openAddRequest;
 		returnFocusRef.current = document.querySelector<HTMLElement>(".floating-add-button");
 		onCancelRef.current();
 		setFormOpen(true);
-	}, [onAddRequestHandled, openAddRequest]);
+	}, [openAddRequest]);
 
 	return (
 		<>
@@ -175,19 +187,34 @@ export function TransactionsView({
 						<p className="eyebrow">HISTORY</p>
 						<h3>Transaction history</h3>
 						<p className="transaction-result-count">{transactionResultLabel}</p>
+						<div className="transaction-history-actions">
+							<label className="transaction-sort">
+								<span>Sort by</span>
+								<select
+									value={sort}
+									onChange={(event) => onSortChange(event.target.value as TransactionSort)}
+									aria-label="Sort transactions"
+								>
+									<option value="occurred-desc">Transaction date: newest</option>
+									<option value="occurred-asc">Transaction date: oldest</option>
+									<option value="created-desc">Date added: newest</option>
+									<option value="created-asc">Date added: oldest</option>
+								</select>
+							</label>
+							<button
+								className="filter-toggle"
+								type="button"
+								aria-expanded={filtersOpen}
+								aria-controls="transaction-filters"
+								onClick={() => setFiltersOpen((open) => !open)}
+							>
+								{filtersOpen ? "Hide filters" : "Show filters"}
+								{activeFilterCount > 0 && (
+									<span className="filter-count">{activeFilterCount}</span>
+								)}
+							</button>
+						</div>
 					</div>
-					<button
-						className="filter-toggle"
-						type="button"
-						aria-expanded={filtersOpen}
-						aria-controls="transaction-filters"
-						onClick={() => setFiltersOpen((open) => !open)}
-					>
-						{filtersOpen ? "Hide filters" : "Show filters"}
-						{activeFilterCount > 0 && (
-							<span className="filter-count">{activeFilterCount}</span>
-						)}
-					</button>
 				</div>
 				{filtersOpen && (
 					<div id="transaction-filters">
@@ -201,6 +228,7 @@ export function TransactionsView({
 				)}
 				<TransactionRows
 					transactions={visibleTransactions}
+					groupByCreatedAt={sort.startsWith("created")}
 					accountNames={accountNames}
 					categoryNames={categoryNames}
 					money={money}
@@ -212,7 +240,7 @@ export function TransactionsView({
 							: "Add an income, expense, or transfer to see activity here."
 					}
 				/>
-				{visibleTransactions.length < transactions.length && (
+				{visibleTransactions.length < sortedTransactions.length && (
 					<button
 						className="expand-button"
 						type="button"

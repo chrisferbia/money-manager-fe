@@ -19,6 +19,7 @@ import type {
 	DisplayCurrency,
 	EntryForm,
 	Transaction,
+	TransactionSort,
 	View,
 } from "./types";
 
@@ -66,6 +67,7 @@ function App() {
 	const [notice, setNotice] = useState("");
 	const [saving, setSaving] = useState(false);
 	const [addTransactionRequest, setAddTransactionRequest] = useState(0);
+	const [transactionSort, setTransactionSort] = useState<TransactionSort>("occurred-desc");
 
 	const { accountNames, categoryNames } = useMemo(
 		() => createNameMaps(accounts, categories),
@@ -186,6 +188,8 @@ function App() {
 					expenseCategories={expenseCategories}
 					incomeCategories={incomeCategories}
 					money={money}
+					sort={transactionSort}
+					onSortChange={setTransactionSort}
 					openAddRequest={addTransactionRequest}
 					onAddRequestHandled={() => setAddTransactionRequest(0)}
 					onSave={(event) => actions.saveEntry(event, entry, editing)}

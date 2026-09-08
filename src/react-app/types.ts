@@ -1,6 +1,11 @@
 export type View = "dashboard" | "transactions" | "accounts" | "reports" | "settings";
 export type EntryType = "income" | "expense" | "transfer";
 export type DisplayCurrency = "IDR" | "USD";
+export type TransactionSort =
+	| "occurred-desc"
+	| "occurred-asc"
+	| "created-desc"
+	| "created-asc";
 
 export type Account = {
 	id: number;
