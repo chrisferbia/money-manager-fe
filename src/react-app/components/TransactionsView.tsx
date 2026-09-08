@@ -40,6 +40,21 @@ type TransactionsViewProps = {
 };
 
 const transactionsPageSize = 25;
+type ActiveFilterKey = keyof DashboardFilters;
+
+function formatFilterDate(value: string) {
+	const [year, month, day] = value.split("-").map(Number);
+	if (!year || !month || !day) return value;
+	return new Date(year, month - 1, day).toLocaleDateString("en-US", {
+		month: "short",
+		day: "numeric",
+		year: "numeric",
+	});
+}
+
+function titleCase(value: string) {
+	return value.charAt(0).toUpperCase() + value.slice(1);
+}
 
 export function TransactionsView({
 	accounts,
@@ -66,21 +81,95 @@ export function TransactionsView({
 	onCancel,
 }: TransactionsViewProps) {
 	const hasFilters = Object.values(filters).some(Boolean);
-	const sortedTransactions = useMemo(() => sortTransactions(transactions, sort), [sort, transactions]);
-	const filterKey = JSON.stringify({ filters, sort });
+	const [searchQuery, setSearchQuery] = useState("");
+	const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase();
+	const sortedTransactions = useMemo(
+		() => sortTransactions(transactions, sort),
+		[sort, transactions],
+	);
+	const searchedTransactions = useMemo(() => {
+		if (!normalizedSearchQuery) return sortedTransactions;
+		return sortedTransactions.filter((transaction) => {
+			const typeLabel = titleCase(transaction.type);
+			const sourceAccountLabel = accountNames.get(transaction.account_id) ?? "Account";
+			const destinationAccountLabel =
+				accountNames.get(transaction.related_account_id ?? 0) ?? "Account";
+			const accountLabel =
+				transaction.type === "transfer"
+					? `${sourceAccountLabel} ${destinationAccountLabel}`
+					: sourceAccountLabel;
+			const categoryLabel =
+				transaction.type === "transfer"
+					? "Transfer"
+					: transaction.category_id
+						? (categoryNames.get(transaction.category_id) ?? "Category")
+						: typeLabel;
+			return [
+				typeLabel,
+				accountLabel,
+				categoryLabel,
+				transaction.description,
+				transaction.counterparty,
+			].some((value) => value?.toLocaleLowerCase().includes(normalizedSearchQuery));
+		});
+	}, [accountNames, categoryNames, normalizedSearchQuery, sortedTransactions]);
+	const filterKey = JSON.stringify({ filters, normalizedSearchQuery, sort });
 	const [pagination, setPagination] = useState({
 		filterKey: "",
 		visibleCount: transactionsPageSize,
 	});
 	const visibleTransactionCount =
 		pagination.filterKey === filterKey ? pagination.visibleCount : transactionsPageSize;
-	const visibleTransactions = sortedTransactions.slice(0, visibleTransactionCount);
-	const transactionCountLabel = `${sortedTransactions.length} transaction${sortedTransactions.length === 1 ? "" : "s"}`;
+	const visibleTransactions = searchedTransactions.slice(0, visibleTransactionCount);
+	const transactionCountLabel = `${searchedTransactions.length} transaction${
+		searchedTransactions.length === 1 ? "" : "s"
+	}`;
 	const transactionResultLabel =
-		visibleTransactions.length < sortedTransactions.length
+		visibleTransactions.length < searchedTransactions.length
 			? `Showing ${visibleTransactions.length} of ${transactionCountLabel}`
 			: transactionCountLabel;
 	const activeFilterCount = Object.values(filters).filter(Boolean).length;
+	const hasVisibleCriteria = hasFilters || Boolean(normalizedSearchQuery);
+	const activeFilterChips: Array<{
+		key: ActiveFilterKey | "search";
+		label: string;
+		value: string;
+	}> = [];
+	if (filters.account)
+		activeFilterChips.push({
+			key: "account",
+			label: "Account",
+			value: accountNames.get(Number(filters.account)) ?? "Selected account",
+		});
+	if (filters.type)
+		activeFilterChips.push({ key: "type", label: "Type", value: titleCase(filters.type) });
+	if (filters.category)
+		activeFilterChips.push({
+			key: "category",
+			label: "Category",
+			value: categoryNames.get(Number(filters.category)) ?? "Selected category",
+		});
+	if (filters.from)
+		activeFilterChips.push({ key: "from", label: "From", value: formatFilterDate(filters.from) });
+	if (filters.to)
+		activeFilterChips.push({ key: "to", label: "To", value: formatFilterDate(filters.to) });
+	if (normalizedSearchQuery)
+		activeFilterChips.push({ key: "search", label: "Search", value: searchQuery.trim() });
+	const removeFilter = (key: ActiveFilterKey | "search") => {
+		if (key === "search") {
+			setSearchQuery("");
+			return;
+		}
+		setFilters({ ...filters, [key]: "" });
+	};
+	const clearAllFilters = () => setFilters({ account: "", type: "", category: "", from: "", to: "" });
+	const incomeTotal = searchedTransactions
+		.filter((transaction) => transaction.type === "income")
+		.reduce((total, transaction) => total + transaction.amount, 0);
+	const expenseTotal = searchedTransactions
+		.filter((transaction) => transaction.type === "expense")
+		.reduce((total, transaction) => total + transaction.amount, 0);
+	const netTotal = incomeTotal - expenseTotal;
 	const [formOpen, setFormOpen] = useState(false);
 	const [filtersOpen, setFiltersOpen] = useState(false);
 	const [deleting, setDeleting] = useState(false);
@@ -188,6 +277,15 @@ export function TransactionsView({
 						<h3>Transaction history</h3>
 						<p className="transaction-result-count">{transactionResultLabel}</p>
 						<div className="transaction-history-actions">
+							<label className="transaction-search">
+								<span>Search</span>
+								<input
+									value={searchQuery}
+									onChange={(event) => setSearchQuery(event.target.value)}
+									placeholder="Description or counterparty"
+									aria-label="Search transactions"
+								/>
+							</label>
 							<label className="transaction-sort">
 								<span>Sort by</span>
 								<select
@@ -209,9 +307,7 @@ export function TransactionsView({
 								onClick={() => setFiltersOpen((open) => !open)}
 							>
 								{filtersOpen ? "Hide filters" : "Show filters"}
-								{activeFilterCount > 0 && (
-									<span className="filter-count">{activeFilterCount}</span>
-								)}
+								{activeFilterCount > 0 && <span className="filter-count">{activeFilterCount}</span>}
 							</button>
 						</div>
 					</div>
@@ -226,6 +322,47 @@ export function TransactionsView({
 						/>
 					</div>
 				)}
+				{activeFilterChips.length > 0 && (
+					<div className="active-filters" aria-label="Active transaction filters">
+						<div className="active-filter-chips">
+							{activeFilterChips.map((chip) => (
+								<span className="active-filter-chip" key={chip.key}>
+									<span>
+										{chip.label}: <strong>{chip.value}</strong>
+									</span>
+									<button
+										type="button"
+										aria-label={`Remove ${chip.label.toLowerCase()} filter`}
+										onClick={() => removeFilter(chip.key)}
+									>
+										×
+									</button>
+								</span>
+							))}
+						</div>
+						{hasFilters && (
+							<button className="clear-active-filters" type="button" onClick={clearAllFilters}>
+								Clear filters
+							</button>
+						)}
+					</div>
+				)}
+				{searchedTransactions.length > 0 && (
+					<div className="transaction-summary" aria-label="Transaction summary">
+						<div>
+							<span>Income</span>
+							<strong className="income">{money(incomeTotal)}</strong>
+						</div>
+						<div>
+							<span>Expenses</span>
+							<strong className="expense">{money(expenseTotal)}</strong>
+						</div>
+						<div>
+							<span>Net</span>
+							<strong className={netTotal >= 0 ? "income" : "expense"}>{money(netTotal)}</strong>
+						</div>
+					</div>
+				)}
 				<TransactionRows
 					transactions={visibleTransactions}
 					groupByCreatedAt={sort.startsWith("created")}
@@ -233,14 +370,14 @@ export function TransactionsView({
 					categoryNames={categoryNames}
 					money={money}
 					onEdit={openEditForm}
-					emptyTitle={hasFilters ? "No matching transactions" : "No transactions yet"}
+					emptyTitle={hasVisibleCriteria ? "No matching transactions" : "No transactions yet"}
 					emptyDescription={
-						hasFilters
-							? "Try clearing a filter or choosing a wider date range."
+						hasVisibleCriteria
+							? "Try removing a filter or using a broader search."
 							: "Add an income, expense, or transfer to see activity here."
 					}
 				/>
-				{visibleTransactions.length < sortedTransactions.length && (
+				{visibleTransactions.length < searchedTransactions.length && (
 					<button
 						className="expand-button"
 						type="button"
