@@ -169,6 +169,7 @@ function App() {
 					balance={balance}
 					money={money}
 					onAccountSelect={openAccountTransactions}
+					onCategorySelect={openCategoryTransactions}
 					onNavigate={selectView}
 				/>
 			)}

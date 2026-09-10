@@ -206,19 +206,24 @@ export function TransactionsView({
 		const dialog = dialogRef.current;
 		if (!dialog) return;
 		if (formOpen && !dialog.open) dialog.showModal();
-		if (formOpen && pendingAddRequestRef.current !== null) {
-			pendingAddRequestRef.current = null;
-			onAddRequestHandled();
-		}
 		if (!formOpen && dialog.open) dialog.close();
 		if (formOpen) {
-			window.requestAnimationFrame(() =>
+			// Set initial focus only when opening, never after an input update.
+			const focusFrame = window.requestAnimationFrame(() =>
 				dialog
 					.querySelector<HTMLElement>("input:not([disabled]), select:not([disabled])")
 					?.focus(),
 			);
+			return () => window.cancelAnimationFrame(focusFrame);
 		}
-	}, [formOpen, editing, onAddRequestHandled]);
+	}, [formOpen]);
+
+	useEffect(() => {
+		if (formOpen && pendingAddRequestRef.current !== null) {
+			pendingAddRequestRef.current = null;
+			onAddRequestHandled();
+		}
+	}, [formOpen, onAddRequestHandled]);
 
 	useEffect(() => {
 		if (openAddRequest === 0 || openAddRequest <= handledAddRequestRef.current) return;

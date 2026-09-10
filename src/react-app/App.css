@@ -825,9 +825,14 @@ button:disabled {
 	border-bottom: 1px solid #ecebe5;
 	cursor: pointer;
 }
+.category-item[role="button"] {
+	cursor: pointer;
+}
+.category-item[role="button"]:hover,
 .report-row:hover {
 	background: #fafcf9;
 }
+.category-item[role="button"]:focus-visible,
 .report-row:focus-visible {
 	outline: 3px solid #dfeae3;
 	outline-offset: 2px;
