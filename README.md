@@ -43,6 +43,78 @@ Available scripts
 - npm run build — build production assets
 - npm run preview — preview the production build locally
 - npm run lint — run ESLint (if configured)
+- npm test — run all unit and integration tests once
+
+## Testing and regression checks
+
+Regression tests check that previously fixed bugs do not return. The suite uses Vitest, React Testing Library, and jsdom. API calls are mocked: you do not need a running backend, development server, or real account data to run these tests.
+
+Run commands from the frontend directory. For this Windows checkout:
+
+```powershell
+cd C:\Users\User\Documents\repo\money-manager-fe
+```
+
+On another machine, use the path to your `money-manager-fe` checkout. Install dependencies with `npm ci` on a fresh checkout or after pulling dependency changes.
+
+### Run all tests
+
+```bash
+npm test
+```
+
+This runs all test files once and exits. A successful run reports all tests as `passed` and exits with code 0. If a test fails, Vitest prints the test name, file, and expected versus actual result. The suite currently contains 64 tests; that number will grow as coverage is added.
+
+### Run regression tests or one file
+
+Run the refresh, date-filter, and API-recovery regression files together:
+
+```bash
+npm test -- tests/refresh.test.tsx tests/query-dates.test.ts tests/api-client.test.ts
+```
+
+Run only the transaction unit tests:
+
+```bash
+npm test -- tests/transactions.test.ts
+```
+
+To run one named test, use `-t` with all or part of its name:
+
+```bash
+npm test -- tests/refresh.test.tsx -t "opens and saves two consecutive transactions"
+```
+
+### Watch tests while editing
+
+```bash
+npx vitest
+```
+
+Vitest stays open and reruns affected tests when files change. Press `q` to quit, or `Ctrl+C` to stop it. You can also watch one file with `npx vitest tests/transactions.test.ts`.
+
+### What each test file covers
+
+| File | Coverage |
+| --- | --- |
+| `tests/transactions.test.ts` | Unit tests for validation, transfers, IDR rounding, payloads, editing, date round-trips, and sorting |
+| `tests/refresh.test.tsx` | App integration tests for caching, filtering, modal focus, consecutive transactions, balance refreshes, request races, and clearing report dates |
+| `tests/query-dates.test.ts` | Local-day boundaries for transaction and report queries, including year and leap-year boundaries |
+| `tests/api-client.test.ts` | Recovery after runtime-config failures and sharing configuration requests |
+
+The test configuration sets the timezone to `Asia/Jakarta` so date checks produce consistent results on local machines and CI. These tests use a simulated browser and mocked dialog methods; they do not replace checking native dialogs and mobile layouts in a real browser.
+
+### Before merging or deploying
+
+Run each check and resolve failures before continuing:
+
+```bash
+npm test
+npm run lint
+npm run build
+```
+
+These commands validate the code and create a local production build. They do not deploy the application. When fixing another bug, add a test that reproduces it in `tests/` using a `.test.ts` or `.test.tsx` filename so `npm test` picks it up automatically.
 
 Environment
 The deployed frontend reads its backend URL from `/runtime-config.json`. The Worker creates that response from its `BACKEND_URL` runtime variable, so the same build can be deployed to multiple Workers.

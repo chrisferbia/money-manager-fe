@@ -53,7 +53,10 @@ async function loadApiBase(): Promise<string> {
 }
 
 function getApiBase(): Promise<string> {
-	apiBasePromise ??= loadApiBase();
+	apiBasePromise ??= loadApiBase().catch((error) => {
+		apiBasePromise = undefined;
+		throw error;
+	});
 	return apiBasePromise;
 }
 

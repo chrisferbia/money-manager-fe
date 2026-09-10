@@ -22,13 +22,18 @@ export const categoryQuery = () =>
 		staleTime: 5 * 60_000,
 	});
 
+// The backend stores and compares UTC timestamps at whole-second precision.
+function localDateBoundary(date: string, time: string) {
+	return new Date(date + "T" + time).toISOString().replace(".000Z", "Z");
+}
+
 export function transactionQuery(filters: DashboardFilters) {
 	const params = new URLSearchParams();
 	if (filters.account) params.set("account_id", filters.account);
 	if (filters.category) params.set("category_id", filters.category);
 	if (filters.type) params.set("type", filters.type);
-	if (filters.from) params.set("from", `${filters.from}T00:00:00Z`);
-	if (filters.to) params.set("to", `${filters.to}T23:59:59Z`);
+	if (filters.from) params.set("from", localDateBoundary(filters.from, "00:00:00"));
+	if (filters.to) params.set("to", localDateBoundary(filters.to, "23:59:59"));
 	return queryOptions({
 		queryKey: ["transactions", params.toString()],
 		queryFn: async ({ signal }) =>
@@ -38,8 +43,8 @@ export function transactionQuery(filters: DashboardFilters) {
 
 export function reportQuery(filters: Pick<DashboardFilters, "from" | "to">) {
 	const params = new URLSearchParams();
-	if (filters.from) params.set("from", `${filters.from}T00:00:00Z`);
-	if (filters.to) params.set("to", `${filters.to}T23:59:59Z`);
+	if (filters.from) params.set("from", localDateBoundary(filters.from, "00:00:00"));
+	if (filters.to) params.set("to", localDateBoundary(filters.to, "23:59:59"));
 	return queryOptions({
 		queryKey: ["reports", params.toString()],
 		queryFn: ({ signal }) =>

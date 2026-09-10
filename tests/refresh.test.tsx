@@ -210,3 +210,43 @@ it("revalidates expired shared transactions on navigation", async () => {
 	fireEvent.click(screen.getByRole("button", { name: "Transactions", exact: true }));
 	await waitFor(() => expect(count("/transactions")).toBe(before + 1));
 });
+
+it("opens and saves two consecutive transactions, then opens again after navigation", async () => {
+	await start();
+	const user = userEvent.setup();
+	for (let index = 0; index < 2; index++) {
+		await user.click(screen.getByRole("button", { name: "Add transaction", exact: true }));
+		await waitFor(() => expect(document.querySelector("dialog")?.open).toBe(true));
+		await user.selectOptions(screen.getByLabelText("Category"), "1");
+		await user.type(screen.getByLabelText("Amount (IDR)"), "1000");
+		await user.click(screen.getByRole("button", { name: /Add expense/ }));
+		await waitFor(() => expect(document.querySelector("dialog")?.open).toBe(false));
+	}
+	expect(mockRequest.mock.calls.filter(([, options]) => options?.method === "POST")).toHaveLength(
+		2,
+	);
+	await user.click(screen.getByRole("button", { name: "Overview", exact: true }));
+	await user.click(screen.getByRole("button", { name: "Transactions", exact: true }));
+	expect(document.querySelector("dialog")?.open).toBe(false);
+	await user.click(screen.getByRole("button", { name: "Add transaction", exact: true }));
+	await waitFor(() => expect(document.querySelector("dialog")?.open).toBe(true));
+});
+
+it("clears both report dates together and preserves the category drilldown", async () => {
+	await start();
+	const user = userEvent.setup();
+	await user.click(screen.getByRole("button", { name: "Reports", exact: true }));
+	fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-09-01" } });
+	await waitFor(() => expect(screen.queryByText("Loading your ledger")).toBeNull());
+	fireEvent.change(screen.getByLabelText("To"), { target: { value: "2026-09-11" } });
+	await waitFor(() => expect(screen.queryByText("Loading your ledger")).toBeNull());
+	await user.click(screen.getByRole("button", { name: "Clear dates" }));
+	expect((screen.getByLabelText("From") as HTMLInputElement).value).toBe("");
+	expect((screen.getByLabelText("To") as HTMLInputElement).value).toBe("");
+	await user.click(screen.getByRole("button", { name: "View transactions for Food" }));
+	await waitFor(() =>
+		expect(
+			mockRequest.mock.calls.some(([path]) => path === "/transactions?category_id=1"),
+		).toBe(true),
+	);
+});

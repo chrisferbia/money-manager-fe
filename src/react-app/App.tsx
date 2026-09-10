@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import { useMoneyManagerData } from "./hooks/useMoneyManagerData";
 import { useMoneyManagerActions } from "./hooks/useMoneyManagerActions";
@@ -68,6 +68,7 @@ function App() {
 	const [notice, setNotice] = useState("");
 	const [saving, setSaving] = useState(false);
 	const [addTransactionRequest, setAddTransactionRequest] = useState(0);
+	const nextAddTransactionRequest = useRef(0);
 	const [transactionSort, setTransactionSort] = useState<TransactionSort>("occurred-desc");
 
 	const { accountNames, categoryNames } = useMemo(
@@ -131,7 +132,7 @@ function App() {
 		setError("");
 		setNotice("");
 		selectView("transactions");
-		setAddTransactionRequest((request) => request + 1);
+		setAddTransactionRequest(++nextAddTransactionRequest.current);
 	}
 	function openAccountTransactions(accountId: number) {
 		setFilters({ account: String(accountId), type: "", category: "", from: "", to: "" });
@@ -223,8 +224,8 @@ function App() {
 					money={money}
 					fromDate={filters.from}
 					toDate={filters.to}
-					setFromDate={(value) => setFilters({ ...filters, from: value })}
-					setToDate={(value) => setFilters({ ...filters, to: value })}
+					setFromDate={(value) => setFilters((current) => ({ ...current, from: value }))}
+					setToDate={(value) => setFilters((current) => ({ ...current, to: value }))}
 					onCategorySelect={openCategoryTransactions}
 				/>
 			)}
