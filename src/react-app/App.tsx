@@ -44,7 +44,8 @@ function App() {
 		setError,
 		loading,
 		initialLoading,
-		refresh,
+		refreshTransactions,
+		refreshCategories,
 		refreshAccounts,
 	} = useMoneyManagerData(view);
 	const [entry, setEntry] = useState<EntryForm>(blankEntry());
@@ -86,7 +87,8 @@ function App() {
 	const actions = useMoneyManagerActions({
 		accounts,
 		filters,
-		refresh,
+		refreshTransactions,
+		refreshCategories,
 		refreshAccounts,
 		setError,
 		setNotice,

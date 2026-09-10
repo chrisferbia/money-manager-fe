@@ -78,7 +78,7 @@ export function AppShell({
 						{notice}
 					</div>
 				)}
-				{loading ? (
+				{initialLoading && (
 					<div className="loading-state" role="status" aria-live="polite">
 						<span className="loading-spinner" aria-hidden="true" />
 						<div>
@@ -92,9 +92,13 @@ export function AppShell({
 							</span>
 						</div>
 					</div>
-				) : (
-					children
 				)}
+				{loading && !initialLoading && (
+					<p role="status" aria-live="polite">
+						Updating data...
+					</p>
+				)}
+				<div hidden={initialLoading}>{children}</div>
 			</main>
 			<footer>Data is managed by your Money Manager backend.</footer>
 		</div>

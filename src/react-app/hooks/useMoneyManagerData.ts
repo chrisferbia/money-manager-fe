@@ -1,101 +1,90 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { request } from "../api/client";
-import type { Account, Category, DashboardFilters, ReportItem, Transaction, View } from "../types";
+import { useCallback, useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { accountQuery, categoryQuery, reportQuery, transactionQuery } from "../api/queries";
+import type { DashboardFilters, View } from "../types";
 import { errorMessage } from "../utils/errors";
-import { sortTransactions } from "../utils/transactions";
 
 const emptyFilters: DashboardFilters = { account: "", type: "", category: "", from: "", to: "" };
 
 export function useMoneyManagerData(view: View) {
-	const [accounts, setAccounts] = useState<Account[]>([]);
-	const [categories, setCategories] = useState<Category[]>([]);
-	const [transactions, setTransactions] = useState<Transaction[]>([]);
-	const [report, setReport] = useState<ReportItem[]>([]);
+	const client = useQueryClient();
 	const [filters, setFilters] = useState<DashboardFilters>(emptyFilters);
-	const [error, setError] = useState("");
-	const [loading, setLoading] = useState(true);
-	const [hasLoaded, setHasLoaded] = useState(false);
-	const loadedRef = useRef({ accounts: false, categories: false });
+	const [actionError, setActionError] = useState("");
+	const [dismissedFetchError, setDismissedFetchError] = useState<Error | undefined>(undefined);
+	const needsAccounts = view === "dashboard" || view === "transactions" || view === "accounts";
+	const needsCategories = view === "dashboard" || view === "transactions" || view === "settings";
+	const needsTransactions = view === "dashboard" || view === "transactions";
+	const needsReport = view === "dashboard" || view === "reports";
+	const accounts = useQuery({ ...accountQuery(), enabled: needsAccounts });
+	const categories = useQuery({ ...categoryQuery(), enabled: needsCategories });
+	const transactions = useQuery({ ...transactionQuery(filters), enabled: needsTransactions });
+	const report = useQuery({ ...reportQuery(filters), enabled: needsReport });
 
-	const refresh = useCallback(
-		async (force = false) => {
-			setLoading(true);
-			try {
-				const needsAccounts =
-					view === "dashboard" || view === "transactions" || view === "accounts";
-				const needsCategories =
-					view === "dashboard" || view === "transactions" || view === "settings";
-				const needsTransactions = view === "dashboard" || view === "transactions";
-				const needsReport = view === "dashboard" || view === "reports";
-				const transactionParams = new URLSearchParams();
-				if (filters.account) transactionParams.set("account_id", filters.account);
-				if (filters.category) transactionParams.set("category_id", filters.category);
-				if (filters.type) transactionParams.set("type", filters.type);
-				if (filters.from) transactionParams.set("from", `${filters.from}T00:00:00Z`);
-				if (filters.to) transactionParams.set("to", `${filters.to}T23:59:59Z`);
-
-				const reportParams = new URLSearchParams();
-				if (filters.from) reportParams.set("from", `${filters.from}T00:00:00Z`);
-				if (filters.to) reportParams.set("to", `${filters.to}T23:59:59Z`);
-
-				const [accountData, categoryData, transactionData, reportData] = await Promise.all([
-					needsAccounts && (force || !loadedRef.current.accounts)
-						? request<Account[]>("/accounts?include_balance=true")
-						: Promise.resolve(null),
-					needsCategories && (force || !loadedRef.current.categories)
-						? request<Category[]>("/categories")
-						: Promise.resolve(null),
-					needsTransactions
-						? request<Transaction[]>(`/transactions?${transactionParams}`)
-						: Promise.resolve(null),
-					needsReport
-						? request<ReportItem[]>(`/reports/expenses-by-category?${reportParams}`)
-						: Promise.resolve(null),
-				]);
-
-				if (accountData) {
-					setAccounts(accountData);
-					loadedRef.current.accounts = true;
-				}
-				if (categoryData) {
-					setCategories(categoryData);
-					loadedRef.current.categories = true;
-				}
-				if (transactionData) setTransactions(sortTransactions(transactionData));
-				if (reportData) setReport(reportData);
-				setError("");
-			} catch (reason) {
-				setError(errorMessage(reason, "Could not connect to the backend."));
-			} finally {
-				setLoading(false);
-				setHasLoaded(true);
-			}
+	// This shared hook stays mounted across pages. Recheck freshness on navigation;
+	// fetchQuery reuses fresh cache entries and deduplicates in-flight requests.
+	useEffect(() => {
+		if (view === "dashboard" || view === "transactions" || view === "accounts")
+			void client.fetchQuery(accountQuery()).catch(() => {});
+		if (view === "dashboard" || view === "transactions" || view === "settings")
+			void client.fetchQuery(categoryQuery()).catch(() => {});
+		if (view === "dashboard" || view === "transactions")
+			void client.fetchQuery(transactionQuery(filters)).catch(() => {});
+		if (view === "dashboard" || view === "reports")
+			void client.fetchQuery(reportQuery(filters)).catch(() => {});
+	}, [client, filters, view]);
+	const active = [
+		...(needsAccounts ? [accounts] : []),
+		...(needsCategories ? [categories] : []),
+		...(needsTransactions ? [transactions] : []),
+		...(needsReport ? [report] : []),
+	];
+	const loading = active.some((query) => query.isFetching);
+	const initialLoading = active.some((query) => query.isLoading);
+	const fetchError = active.find((query) => query.error)?.error;
+	const error =
+		actionError ||
+		(fetchError && fetchError !== dismissedFetchError
+			? errorMessage(fetchError, "Could not refresh data. Please try again.")
+			: "");
+	const setError = useCallback(
+		(message: string) => {
+			setActionError(message);
+			setDismissedFetchError(fetchError ?? undefined);
 		},
-		[filters, view],
+		[fetchError],
 	);
 
+	// Invalidate every cached filter variant; only visible queries refetch immediately.
+	const refreshTransactions = useCallback(async () => {
+		await Promise.all([
+			client.invalidateQueries({ queryKey: ["transactions"] }),
+			client.invalidateQueries({ queryKey: ["accounts"] }),
+			client.invalidateQueries({ queryKey: ["reports"] }),
+		]);
+	}, [client]);
 	const refreshAccounts = useCallback(async () => {
-		const accountData = await request<Account[]>("/accounts?include_balance=true");
-		setAccounts(accountData);
-		loadedRef.current.accounts = true;
-	}, []);
-
-	useEffect(() => {
-		void refresh();
-	}, [refresh]);
+		await client.invalidateQueries({ queryKey: ["accounts"] });
+	}, [client]);
+	const refreshCategories = useCallback(async () => {
+		await Promise.all([
+			client.invalidateQueries({ queryKey: ["categories"] }),
+			client.invalidateQueries({ queryKey: ["reports"] }),
+		]);
+	}, [client]);
 
 	return {
-		accounts,
-		categories,
-		transactions,
-		report,
+		accounts: accounts.data ?? [],
+		categories: categories.data ?? [],
+		transactions: transactions.data ?? [],
+		report: report.data ?? [],
 		filters,
 		setFilters,
 		error,
 		setError,
 		loading,
-		initialLoading: loading && !hasLoaded,
-		refresh,
+		initialLoading,
+		refreshTransactions,
 		refreshAccounts,
+		refreshCategories,
 	};
 }

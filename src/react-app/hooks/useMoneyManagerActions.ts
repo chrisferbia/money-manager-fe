@@ -24,7 +24,8 @@ import {
 type ActionDependencies = {
 	accounts: Account[];
 	filters: DashboardFilters;
-	refresh: (force?: boolean) => Promise<void>;
+	refreshTransactions: () => Promise<void>;
+	refreshCategories: () => Promise<void>;
 	refreshAccounts: () => Promise<void>;
 	setError: (message: string) => void;
 	setNotice: (message: string) => void;
@@ -41,7 +42,8 @@ type ActionDependencies = {
 export function useMoneyManagerActions({
 	accounts,
 	filters,
-	refresh,
+	refreshTransactions,
+	refreshCategories,
 	refreshAccounts,
 	setError,
 	setNotice,
@@ -95,7 +97,8 @@ export function useMoneyManagerActions({
 			resetEntry();
 			setError("");
 			setNotice(wasEditing ? "Transaction updated." : "Transaction added.");
-			await refresh();
+			// Transactions change balances, so reload the cached accounts too.
+			await refreshTransactions();
 			return true;
 		} catch (reason) {
 			setError(errorMessage(reason, "Could not save transaction."));
@@ -120,7 +123,7 @@ export function useMoneyManagerActions({
 		try {
 			await request<void>(`/transactions/${transaction.id}`, { method: "DELETE" });
 			setNotice("Transaction deleted.");
-			await refresh();
+			await refreshTransactions();
 			return true;
 		} catch (reason) {
 			setError(errorMessage(reason, "Could not delete transaction."));
@@ -238,7 +241,7 @@ export function useMoneyManagerActions({
 			setEditingCategory(null);
 			setError("");
 			setNotice(wasEditing ? "Category updated." : "Category added.");
-			await refresh(true);
+			await refreshCategories();
 			return true;
 		} catch (reason) {
 			setError(errorMessage(reason, "Could not save category."));
@@ -259,7 +262,7 @@ export function useMoneyManagerActions({
 		try {
 			await request<void>(`/categories/${category.id}`, { method: "DELETE" });
 			setNotice("Category deleted.");
-			await refresh(true);
+			await refreshCategories();
 		} catch (reason) {
 			setError(errorMessage(reason, "Could not delete category."));
 		} finally {
