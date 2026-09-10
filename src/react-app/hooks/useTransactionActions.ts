@@ -1,4 +1,4 @@
-import type { Dispatch, FormEvent, SetStateAction } from "react";
+import { useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
 import { request } from "../api/client";
 import type { Account, DashboardFilters, EntryForm, Transaction, View } from "../types";
 import type { ActionFeedback } from "./actionTypes";
@@ -17,8 +17,6 @@ export type TransactionActionDependencies = ActionFeedback & {
 	filters: DashboardFilters;
 	refreshTransactions: () => Promise<void>;
 	setView: Dispatch<SetStateAction<View>>;
-	setEntry: Dispatch<SetStateAction<EntryForm>>;
-	setEditing: Dispatch<SetStateAction<Transaction | null>>;
 };
 
 export function useTransactionActions({
@@ -27,11 +25,11 @@ export function useTransactionActions({
 	refreshTransactions,
 	setError,
 	setNotice,
-	setSaving,
 	setView,
-	setEntry,
-	setEditing,
 }: TransactionActionDependencies) {
+	const [entry, setEntry] = useState<EntryForm>(() => blankEntry());
+	const [editing, setEditing] = useState<Transaction | null>(null);
+	const [transactionSaving, setSaving] = useState(false);
 	function resetEntry() {
 		setEditing(null);
 		setEntry(blankEntry(filters.account || String(accounts[0]?.id ?? "")));
@@ -39,34 +37,34 @@ export function useTransactionActions({
 
 	async function saveEntry(
 		event: FormEvent<HTMLFormElement>,
-		entry: EntryForm,
-		editing: Transaction | null,
+		draft: EntryForm = entry,
+		selected: Transaction | null = editing,
 	): Promise<boolean> {
 		event.preventDefault();
-		const validationError = validateEntry(entry);
+		const validationError = validateEntry(draft);
 		if (validationError) {
 			setError(validationError);
 			return false;
 		}
 		setSaving(true);
 		try {
-			if (editing)
-				await request<Transaction>(`/transactions/${editing.id}`, {
+			if (selected)
+				await request<Transaction>(`/transactions/${selected.id}`, {
 					method: "PATCH",
-					body: JSON.stringify(updateTransactionPayload(entry)),
+					body: JSON.stringify(updateTransactionPayload(draft)),
 				});
-			else if (entry.type === "transfer")
+			else if (draft.type === "transfer")
 				await request<Transaction>("/transfers", {
 					method: "POST",
-					body: JSON.stringify(createTransferPayload(entry)),
+					body: JSON.stringify(createTransferPayload(draft)),
 				});
 			else
 				await request<Transaction>("/transactions", {
 					method: "POST",
-					body: JSON.stringify(createTransactionPayload(entry)),
+					body: JSON.stringify(createTransactionPayload(draft)),
 				});
 
-			const wasEditing = Boolean(editing);
+			const wasEditing = Boolean(selected);
 			resetEntry();
 			setError("");
 			setNotice(wasEditing ? "Transaction updated." : "Transaction added.");
@@ -104,5 +102,14 @@ export function useTransactionActions({
 		}
 	}
 
-	return { resetEntry, saveEntry, editTransaction, deleteTransaction };
+	return {
+		entry,
+		setEntry,
+		editing,
+		transactionSaving,
+		resetEntry,
+		saveEntry,
+		editTransaction,
+		deleteTransaction,
+	};
 }

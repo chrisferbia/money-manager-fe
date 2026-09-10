@@ -1,4 +1,4 @@
-import { useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
+import { useState, type FormEvent } from "react";
 import { request } from "../api/client";
 import type { Category, CategoryDraft } from "../types";
 import type { ActionFeedback } from "./actionTypes";
@@ -7,23 +7,25 @@ import { categoryNameMaxLength } from "../utils/constants";
 
 export type CategoryActionDependencies = ActionFeedback & {
 	refreshCategories: () => Promise<void>;
-	setCategoryDraft: Dispatch<SetStateAction<CategoryDraft>>;
-	setEditingCategory: Dispatch<SetStateAction<Category | null>>;
 };
 
 export function useCategoryActions({
 	refreshCategories,
 	setError,
 	setNotice,
-	setSaving,
-	setCategoryDraft,
-	setEditingCategory,
 }: CategoryActionDependencies) {
+	const [categoryDraft, setCategoryDraft] = useState<CategoryDraft>({
+		name: "",
+		type: "expense",
+		sequence: "",
+	});
+	const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+	const [categorySaving, setSaving] = useState(false);
 	const [deletingCategoryId, setDeletingCategoryId] = useState<number | null>(null);
 	async function saveCategory(
 		event: FormEvent<HTMLFormElement>,
-		draft: CategoryDraft,
-		editing: Category | null,
+		draft: CategoryDraft = categoryDraft,
+		editing: Category | null = editingCategory,
 	): Promise<boolean> {
 		event.preventDefault();
 		const name = draft.name.trim();
@@ -86,5 +88,14 @@ export function useCategoryActions({
 		}
 	}
 
-	return { saveCategory, deleteCategory, deletingCategoryId };
+	return {
+		categoryDraft,
+		setCategoryDraft,
+		editingCategory,
+		setEditingCategory,
+		categorySaving,
+		saveCategory,
+		deleteCategory,
+		deletingCategoryId,
+	};
 }

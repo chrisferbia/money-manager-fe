@@ -25,14 +25,7 @@ function setup(kind: "account" | "category") {
 		refreshTransactions: vi.fn().mockResolvedValue(undefined),
 		setError: vi.fn(),
 		setNotice: vi.fn(),
-		setSaving: vi.fn(),
 		setView: vi.fn(),
-		setEntry: vi.fn(),
-		setEditing: vi.fn(),
-		setAccountDraft: vi.fn(),
-		setEditingAccount: vi.fn(),
-		setCategoryDraft: vi.fn(),
-		setEditingCategory: vi.fn(),
 	};
 	const { result } = renderHook(() => useMoneyManagerActions(dependencies));
 	const event = { preventDefault: vi.fn() } as unknown as FormEvent<HTMLFormElement>;
@@ -44,6 +37,16 @@ function setup(kind: "account" | "category") {
 		sequence: 1,
 		created_at: "2026-01-01",
 	};
+	act(() => {
+		result.current.setAccountDraft({ name: "Unsaved account", type: "cash", sequence: "2" });
+		result.current.setCategoryDraft({
+			name: "Unsaved category",
+			type: "expense",
+			sequence: "2",
+		});
+		result.current.setEditingAccount(account);
+		result.current.setEditingCategory(category);
+	});
 	return {
 		dependencies,
 		result,
@@ -53,10 +56,12 @@ function setup(kind: "account" | "category") {
 		refresh: kind === "account" ? dependencies.refreshAccounts : dependencies.refreshCategories,
 		otherRefresh:
 			kind === "account" ? dependencies.refreshCategories : dependencies.refreshAccounts,
-		resetDraft:
-			kind === "account" ? dependencies.setAccountDraft : dependencies.setCategoryDraft,
-		resetEditing:
-			kind === "account" ? dependencies.setEditingAccount : dependencies.setEditingCategory,
+		draft: () =>
+			kind === "account" ? result.current.accountDraft : result.current.categoryDraft,
+		editing: () =>
+			kind === "account" ? result.current.editingAccount : result.current.editingCategory,
+		saving: () =>
+			kind === "account" ? result.current.accountSaving : result.current.categorySaving,
 		save: (editing = false, changes: { name?: string; sequence?: string } = {}) =>
 			kind === "account"
 				? result.current.saveAccount(
@@ -101,17 +106,16 @@ for (const kind of ["account", "category"] as const) {
 				expect(context.refresh).toHaveBeenCalledOnce();
 				expect(context.otherRefresh).not.toHaveBeenCalled();
 				expect(context.dependencies.refreshTransactions).not.toHaveBeenCalled();
-				expect(context.resetDraft).toHaveBeenCalledWith({
+				expect(context.draft()).toEqual({
 					name: "",
 					type: kind === "account" ? "cash" : "expense",
 					sequence: "",
 				});
-				expect(context.resetEditing).toHaveBeenCalledWith(null);
+				expect(context.editing()).toBeNull();
 				expect(context.dependencies.setNotice).toHaveBeenCalledWith(
 					`${context.label} ${editing ? "updated" : "added"}.`,
 				);
-				expect(context.dependencies.setSaving).toHaveBeenNthCalledWith(1, true);
-				expect(context.dependencies.setSaving).toHaveBeenLastCalledWith(false);
+				expect(context.saving()).toBe(false);
 			},
 		);
 		it.each([{ name: "  " }, { sequence: "0" }, { sequence: "1.5" }])(
@@ -123,7 +127,7 @@ for (const kind of ["account", "category"] as const) {
 				});
 				expect(mockRequest).not.toHaveBeenCalled();
 				expect(context.dependencies.setError).toHaveBeenCalled();
-				expect(context.resetDraft).not.toHaveBeenCalled();
+				expect(context.draft().name).toBe(`Unsaved ${kind}`);
 			},
 		);
 		it("keeps the draft and clears saving after a failed save", async () => {
@@ -133,9 +137,9 @@ for (const kind of ["account", "category"] as const) {
 				expect(await context.save()).toBe(false);
 			});
 			expect(context.dependencies.setError).toHaveBeenCalledWith("Save rejected");
-			expect(context.dependencies.setSaving).toHaveBeenLastCalledWith(false);
-			expect(context.resetDraft).not.toHaveBeenCalled();
-			expect(context.resetEditing).not.toHaveBeenCalled();
+			expect(context.saving()).toBe(false);
+			expect(context.draft().name).toBe(`Unsaved ${kind}`);
+			expect(context.editing()?.id).toBe(7);
 			expect(context.refresh).not.toHaveBeenCalled();
 			expect(context.dependencies.setNotice).not.toHaveBeenCalled();
 		});
@@ -190,3 +194,48 @@ for (const kind of ["account", "category"] as const) {
 		});
 	});
 }
+
+it("owns form drafts and keeps saving states independent during concurrent saves", async () => {
+	const { result, event } = setup("account");
+	act(() => {
+		result.current.setEditingAccount(null);
+		result.current.setEditingCategory(null);
+	});
+	let completeAccount!: () => void;
+	let completeCategory!: () => void;
+	mockRequest.mockImplementation(
+		(path) =>
+			new Promise<void>((resolve) => {
+				if (path === "/accounts") completeAccount = resolve;
+				else if (path === "/categories") completeCategory = resolve;
+			}),
+	);
+	let accountSave!: Promise<boolean>;
+	let categorySave!: Promise<boolean>;
+	act(() => {
+		accountSave = result.current.saveAccount(event);
+	});
+	expect(result.current.accountSaving).toBe(true);
+	expect(result.current.categorySaving).toBe(false);
+	expect(result.current.transactionSaving).toBe(false);
+	act(() => {
+		categorySave = result.current.saveCategory(event);
+	});
+	expect(result.current.categorySaving).toBe(true);
+	await act(async () => {
+		completeAccount();
+		await accountSave;
+	});
+	expect(result.current.accountSaving).toBe(false);
+	expect(result.current.categorySaving).toBe(true);
+	expect(result.current.categoryDraft.name).toBe("Unsaved category");
+	await act(async () => {
+		completeCategory();
+		await categorySave;
+	});
+	expect(result.current.categorySaving).toBe(false);
+	expect(result.current.accountDraft.name).toBe("");
+	expect(result.current.categoryDraft.name).toBe("");
+	expect(JSON.parse(mockRequest.mock.calls[0][1]!.body as string).name).toBe("Unsaved account");
+	expect(JSON.parse(mockRequest.mock.calls[1][1]!.body as string).name).toBe("Unsaved category");
+});

@@ -1,4 +1,4 @@
-import { useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
+import { useState, type FormEvent } from "react";
 import { request } from "../api/client";
 import type { Account, AccountDraft } from "../types";
 import type { ActionFeedback } from "./actionTypes";
@@ -7,23 +7,25 @@ import { accountNameMaxLength, accountTypes } from "../utils/constants";
 
 export type AccountActionDependencies = ActionFeedback & {
 	refreshAccounts: () => Promise<void>;
-	setAccountDraft: Dispatch<SetStateAction<AccountDraft>>;
-	setEditingAccount: Dispatch<SetStateAction<Account | null>>;
 };
 
 export function useAccountActions({
 	refreshAccounts,
 	setError,
 	setNotice,
-	setSaving,
-	setAccountDraft,
-	setEditingAccount,
 }: AccountActionDependencies) {
+	const [accountDraft, setAccountDraft] = useState<AccountDraft>({
+		name: "",
+		type: "cash",
+		sequence: "",
+	});
+	const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+	const [accountSaving, setSaving] = useState(false);
 	const [deletingAccountId, setDeletingAccountId] = useState<number | null>(null);
 	async function saveAccount(
 		event: FormEvent<HTMLFormElement>,
-		draft: AccountDraft,
-		editing: Account | null,
+		draft: AccountDraft = accountDraft,
+		editing: Account | null = editingAccount,
 	): Promise<boolean> {
 		event.preventDefault();
 		const name = draft.name.trim();
@@ -93,5 +95,14 @@ export function useAccountActions({
 		}
 	}
 
-	return { saveAccount, deleteAccount, deletingAccountId };
+	return {
+		accountDraft,
+		setAccountDraft,
+		editingAccount,
+		setEditingAccount,
+		accountSaving,
+		saveAccount,
+		deleteAccount,
+		deletingAccountId,
+	};
 }

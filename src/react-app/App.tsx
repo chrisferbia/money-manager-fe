@@ -9,19 +9,9 @@ import { ReportsView } from "./components/ReportsView";
 import { SettingsView } from "./components/SettingsView";
 import { TransactionsView } from "./components/TransactionsView";
 import { createMoneyFormatter, persistCurrency, readCurrency } from "./utils/currency";
-import { blankEntry } from "./utils/forms";
+
 import { createNameMaps } from "./utils/maps";
-import type {
-	Account,
-	AccountDraft,
-	Category,
-	CategoryDraft,
-	DisplayCurrency,
-	EntryForm,
-	Transaction,
-	TransactionSort,
-	View,
-} from "./types";
+import type { DisplayCurrency, TransactionSort, View } from "./types";
 
 const viewIds: View[] = ["dashboard", "transactions", "accounts", "reports", "settings"];
 
@@ -48,25 +38,10 @@ function App() {
 		refreshCategories,
 		refreshAccounts,
 	} = useMoneyManagerData(view);
-	const [entry, setEntry] = useState<EntryForm>(blankEntry());
-	const [editing, setEditing] = useState<Transaction | null>(null);
-	const [accountDraft, setAccountDraft] = useState<AccountDraft>({
-		name: "",
-		type: "cash",
-		sequence: "",
-	});
-	const [editingAccount, setEditingAccount] = useState<Account | null>(null);
-	const [categoryDraft, setCategoryDraft] = useState<CategoryDraft>({
-		name: "",
-		type: "expense",
-		sequence: "",
-	});
-	const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 	const [currency, setCurrency] = useState<DisplayCurrency>(() =>
 		typeof window === "undefined" ? "IDR" : readCurrency(),
 	);
 	const [notice, setNotice] = useState("");
-	const [saving, setSaving] = useState(false);
 	const [addTransactionRequest, setAddTransactionRequest] = useState(0);
 	const nextAddTransactionRequest = useRef(0);
 	const [transactionSort, setTransactionSort] = useState<TransactionSort>("occurred-desc");
@@ -93,15 +68,22 @@ function App() {
 		refreshAccounts,
 		setError,
 		setNotice,
-		setSaving,
 		setView,
-		setEntry,
-		setEditing,
-		setAccountDraft,
-		setEditingAccount,
-		setCategoryDraft,
-		setEditingCategory,
 	});
+
+	const {
+		entry,
+		setEntry,
+		editing,
+		accountDraft,
+		setAccountDraft,
+		editingAccount,
+		setEditingAccount,
+		categoryDraft,
+		setCategoryDraft,
+		editingCategory,
+		setEditingCategory,
+	} = actions;
 
 	useEffect(() => {
 		const handleLocationChange = () => {
@@ -190,7 +172,7 @@ function App() {
 					entry={entry}
 					setEntry={setEntry}
 					editing={editing}
-					saving={saving}
+					saving={actions.transactionSaving}
 					expenseCategories={expenseCategories}
 					incomeCategories={incomeCategories}
 					money={money}
@@ -198,7 +180,7 @@ function App() {
 					onSortChange={setTransactionSort}
 					openAddRequest={addTransactionRequest}
 					onAddRequestHandled={() => setAddTransactionRequest(0)}
-					onSave={(event) => actions.saveEntry(event, entry, editing)}
+					onSave={actions.saveEntry}
 					onEdit={actions.editTransaction}
 					onDelete={actions.deleteTransaction}
 					onCancel={actions.resetEntry}
@@ -213,10 +195,10 @@ function App() {
 					setDraft={setAccountDraft}
 					editing={editingAccount}
 					setEditing={setEditingAccount}
-					saving={saving}
+					saving={actions.accountSaving}
 					deletingId={actions.deletingAccountId}
 					onAccountSelect={openAccountTransactions}
-					onSave={(event) => actions.saveAccount(event, accountDraft, editingAccount)}
+					onSave={actions.saveAccount}
 					onDelete={actions.deleteAccount}
 				/>
 			)}
@@ -238,11 +220,9 @@ function App() {
 					setDraft={setCategoryDraft}
 					editing={editingCategory}
 					setEditing={setEditingCategory}
-					saving={saving}
+					saving={actions.categorySaving}
 					deletingId={actions.deletingCategoryId}
-					onSaveCategory={(event) =>
-						actions.saveCategory(event, categoryDraft, editingCategory)
-					}
+					onSaveCategory={actions.saveCategory}
 					onDeleteCategory={actions.deleteCategory}
 					currency={currency}
 					onCurrencyChange={changeCurrency}
