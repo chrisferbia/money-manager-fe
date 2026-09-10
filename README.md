@@ -98,6 +98,7 @@ Vitest stays open and reruns affected tests when files change. Press `q` to quit
 | File | Coverage |
 | --- | --- |
 | `tests/transactions.test.ts` | Unit tests for validation, transfers, IDR rounding, payloads, editing, date round-trips, and sorting |
+| `tests/actions.test.tsx` | Account and category action tests for create/edit payloads, validation, save failures, deletion confirmation, pending state, and targeted refreshes |
 | `tests/refresh.test.tsx` | App integration tests for caching, filtering, modal focus, consecutive transactions, balance refreshes, request races, and clearing report dates |
 | `tests/query-dates.test.ts` | Local-day boundaries for transaction and report queries, including year and leap-year boundaries |
 | `tests/api-client.test.ts` | Recovery after runtime-config failures and sharing configuration requests |
