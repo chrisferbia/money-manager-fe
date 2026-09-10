@@ -162,6 +162,8 @@ function App() {
 		>
 			{view === "dashboard" && (
 				<Dashboard
+					fromDate={filters.from}
+					toDate={filters.to}
 					accounts={accounts}
 					accountNames={accountNames}
 					categoryNames={categoryNames}

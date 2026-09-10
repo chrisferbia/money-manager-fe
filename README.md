@@ -63,7 +63,7 @@ On another machine, use the path to your `money-manager-fe` checkout. Install de
 npm test
 ```
 
-This runs all test files once and exits. A successful run reports all tests as `passed` and exits with code 0. If a test fails, Vitest prints the test name, file, and expected versus actual result. The suite currently contains 64 tests; that number will grow as coverage is added.
+This runs all test files once and exits. A successful run reports all tests as `passed` and exits with code 0. If a test fails, Vitest prints the test name, file, and expected versus actual result. The summary shows the current number of tests, which grows as coverage is added.
 
 ### Run regression tests or one file
 

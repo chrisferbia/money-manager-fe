@@ -2,6 +2,8 @@ import type { Account, MoneyFormatter, ReportItem, Transaction, View } from "../
 import { TransactionRows } from "./TransactionRows";
 
 type DashboardProps = {
+	fromDate: string;
+	toDate: string;
 	accounts: Account[];
 	accountNames: Map<number, string>;
 	categoryNames: Map<number, string>;
@@ -17,6 +19,8 @@ type DashboardProps = {
 };
 
 export function Dashboard({
+	fromDate,
+	toDate,
 	accounts,
 	accountNames,
 	categoryNames,
@@ -31,25 +35,41 @@ export function Dashboard({
 	onNavigate,
 }: DashboardProps) {
 	const largestCategory = Math.max(...report.map((item) => item.total), 1);
+	const formatDate = (date: string) =>
+		new Date(`${date}T00:00:00`).toLocaleDateString("en-US", {
+			month: "short",
+			day: "numeric",
+			year: "numeric",
+		});
+	const periodLabel =
+		fromDate && toDate
+			? `${formatDate(fromDate)} – ${formatDate(toDate)}`
+			: fromDate
+				? `From ${formatDate(fromDate)}`
+				: toDate
+					? `Through ${formatDate(toDate)}`
+					: "All time";
 	return (
 		<>
 			<section className="hero">
 				<p className="eyebrow">OVERVIEW</p>
+				<p className="muted">All accounts and categories · {periodLabel}</p>
 			</section>
 			<section className="stats">
 				<div className="stat-card total-balance-stat">
 					<span className="stat-label">Total balance</span>
 					<strong>{money(balance)}</strong>
+					<small>Current balance across all accounts</small>
 				</div>
 				<div className="stat-card">
 					<span className="stat-label">Income</span>
 					<strong className="income">{money(income)}</strong>
-					<small>In filtered period</small>
+					<small>{periodLabel}</small>
 				</div>
 				<div className="stat-card">
 					<span className="stat-label">Expenses</span>
 					<strong className="expense">{money(expenses)}</strong>
-					<small>In filtered period</small>
+					<small>{periodLabel}</small>
 				</div>
 			</section>
 			<div className="dashboard-grid">

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { accountQuery, categoryQuery, reportQuery, transactionQuery } from "../api/queries";
 import type { DashboardFilters, View } from "../types";
@@ -15,9 +15,19 @@ export function useMoneyManagerData(view: View) {
 	const needsCategories = view === "dashboard" || view === "transactions" || view === "settings";
 	const needsTransactions = view === "dashboard" || view === "transactions";
 	const needsReport = view === "dashboard" || view === "reports";
+	const transactionFilters = useMemo(
+		() =>
+			view === "dashboard"
+				? { ...emptyFilters, from: filters.from, to: filters.to }
+				: filters,
+		[filters, view],
+	);
 	const accounts = useQuery({ ...accountQuery(), enabled: needsAccounts });
 	const categories = useQuery({ ...categoryQuery(), enabled: needsCategories });
-	const transactions = useQuery({ ...transactionQuery(filters), enabled: needsTransactions });
+	const transactions = useQuery({
+		...transactionQuery(transactionFilters),
+		enabled: needsTransactions,
+	});
 	const report = useQuery({ ...reportQuery(filters), enabled: needsReport });
 
 	// This shared hook stays mounted across pages. Recheck freshness on navigation;
@@ -28,10 +38,10 @@ export function useMoneyManagerData(view: View) {
 		if (view === "dashboard" || view === "transactions" || view === "settings")
 			void client.fetchQuery(categoryQuery()).catch(() => {});
 		if (view === "dashboard" || view === "transactions")
-			void client.fetchQuery(transactionQuery(filters)).catch(() => {});
+			void client.fetchQuery(transactionQuery(transactionFilters)).catch(() => {});
 		if (view === "dashboard" || view === "reports")
 			void client.fetchQuery(reportQuery(filters)).catch(() => {});
-	}, [client, filters, view]);
+	}, [client, filters, transactionFilters, view]);
 	const active = [
 		...(needsAccounts ? [accounts] : []),
 		...(needsCategories ? [categories] : []),

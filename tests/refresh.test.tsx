@@ -113,7 +113,7 @@ it("keeps search and expanded filters during background refresh", async () => {
 	fireEvent.change(screen.getByRole("textbox", { name: "Search transactions" }), {
 		target: { value: "coffee" },
 	});
-	fireEvent.click(screen.getByRole("button", { name: "Show filters" }));
+	fireEvent.click(screen.getByRole("button", { name: /^Show filters/ }));
 	await act(async () => {
 		await client.invalidateQueries({ queryKey: ["transactions"] });
 	});
@@ -162,7 +162,7 @@ it("updates balances even when the transaction refresh fails and preserves the s
 it("does not show a slow old filter response under the newly selected filter", async () => {
 	await start();
 	fireEvent.click(screen.getByRole("button", { name: "Transactions", exact: true }));
-	fireEvent.click(screen.getByRole("button", { name: "Show filters" }));
+	fireEvent.click(screen.getByRole("button", { name: /^Show filters/ }));
 	let resolveOld!: (value: unknown) => void;
 	const oldResponse = new Promise((resolve) => {
 		resolveOld = resolve;
@@ -249,4 +249,98 @@ it("clears both report dates together and preserves the category drilldown", asy
 			mockRequest.mock.calls.some(([path]) => path === "/transactions?category_id=1"),
 		).toBe(true),
 	);
+});
+
+it("Overview totals and chart share dates while retaining transaction-only filters on return", async () => {
+	const original = mockRequest.getMockImplementation()!;
+	mockRequest.mockImplementation(async (path, options) => {
+		if (!path.startsWith("/transactions") || options?.method) return original(path, options);
+		const params = new URLSearchParams(path.split("?")[1]);
+		const rows = [
+			{
+				id: 1,
+				type: "income",
+				account_id: 2,
+				category_id: null,
+				related_account_id: null,
+				amount: 7000,
+				description: "Salary",
+				counterparty: null,
+				occurred_at: "2026-09-11T01:00:00Z",
+				created_at: "2026-09-11T01:00:00Z",
+			},
+			{
+				id: 2,
+				type: "expense",
+				account_id: 1,
+				category_id: 1,
+				related_account_id: null,
+				amount: 1000,
+				description: "Meal",
+				counterparty: null,
+				occurred_at: "2026-09-11T02:00:00Z",
+				created_at: "2026-09-11T02:00:00Z",
+			},
+		];
+		return rows.filter(
+			(row) =>
+				(!params.get("account_id") ||
+					String(row.account_id) === params.get("account_id")) &&
+				(!params.get("category_id") ||
+					String(row.category_id) === params.get("category_id")) &&
+				(!params.get("type") || row.type === params.get("type")),
+		);
+	});
+	await start();
+	const user = userEvent.setup();
+	await user.click(screen.getByRole("button", { name: "Transactions", exact: true }));
+	await user.click(screen.getByRole("button", { name: /^Show filters/ }));
+	for (const [label, value] of [
+		["Filter by account", "1"],
+		["Filter by category", "1"],
+		["Filter by type", "expense"],
+	]) {
+		await user.selectOptions(screen.getByLabelText(label), value);
+		await waitFor(() => expect(screen.queryByText("Loading your ledger")).toBeNull());
+	}
+	for (const label of ["Transactions from date", "Transactions to date"]) {
+		fireEvent.change(screen.getByLabelText(label), { target: { value: "2026-09-11" } });
+		await waitFor(() => expect(screen.queryByText("Loading your ledger")).toBeNull());
+	}
+	await user.click(screen.getByRole("button", { name: "Overview", exact: true }));
+	await screen.findByText("All accounts and categories · Sep 11, 2026 – Sep 11, 2026");
+	await waitFor(() => expect(screen.queryByText("Loading your ledger")).toBeNull());
+	const stats = Array.from(document.querySelectorAll(".stat-card"));
+	expect(stats.find((card) => card.textContent?.includes("Income"))?.textContent).toContain(
+		"7.000",
+	);
+	expect(stats.find((card) => card.textContent?.includes("Expenses"))?.textContent).toContain(
+		"1.000",
+	);
+	expect(
+		screen.getByRole("button", { name: "View transactions for Food" }).textContent,
+	).toContain("1.000");
+	const transactionPaths = mockRequest.mock.calls.filter(([path]) =>
+		path.startsWith("/transactions"),
+	);
+	const params = new URLSearchParams(transactionPaths.at(-1)![0].split("?")[1]);
+	expect(Object.fromEntries(params)).toEqual({
+		from: "2026-09-10T17:00:00Z",
+		to: "2026-09-11T16:59:59Z",
+	});
+	const reportPaths = mockRequest.mock.calls.filter(([path]) => path.startsWith("/reports"));
+	expect(new URLSearchParams(reportPaths.at(-1)![0].split("?")[1]).toString()).toBe(
+		params.toString(),
+	);
+	await user.click(screen.getByRole("button", { name: "Transactions", exact: true }));
+	await user.click(screen.getByRole("button", { name: /^Show filters/ }));
+	for (const [label, value] of [
+		["Filter by account", "1"],
+		["Filter by category", "1"],
+		["Filter by type", "expense"],
+		["Transactions from date", "2026-09-11"],
+		["Transactions to date", "2026-09-11"],
+	]) {
+		expect((screen.getByLabelText(label) as HTMLInputElement).value).toBe(value);
+	}
 });
