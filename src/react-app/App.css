@@ -2036,7 +2036,9 @@ footer {
 }
 .transaction-summary strong {
 	margin-top: 4px;
-	font: 600 16px/1.2 Georgia, serif;
+	font:
+		600 16px/1.2 Georgia,
+		serif;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -2093,5 +2095,87 @@ footer {
 	}
 	.transaction-summary strong {
 		font-size: 14px;
+	}
+}
+
+.period-selector,
+.period-custom-dates {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+}
+.period-selector {
+	margin-bottom: 0.5rem;
+}
+.period-selector + .hero {
+	margin-bottom: 14px;
+}
+.period-selector + .hero p {
+	margin-block: 8px;
+}
+.month-navigation {
+	display: grid;
+	grid-template-columns: 32px minmax(0, 174px) 32px;
+	align-items: center;
+	gap: 0.25rem;
+	max-width: 100%;
+}
+.period-selector > select {
+	width: auto;
+	flex: 0 0 auto;
+}
+.period-selector .month-navigation input {
+	width: 100%;
+	min-width: 0;
+}
+.period-selector > .text-button {
+	min-height: 32px;
+	white-space: nowrap;
+}
+.period-selector input,
+.period-selector select,
+.month-navigation button {
+	font-family: inherit;
+	font-size: 13px;
+	line-height: 1.25;
+	width: auto;
+	margin: 0;
+	height: 32px;
+	min-height: 32px;
+	border: 1px solid var(--border, #d8dee7);
+	border-radius: 6px;
+	padding: 4px 8px;
+	color: inherit;
+	background: var(--surface, #fff);
+}
+.period-custom-dates label {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin: 0;
+}
+.transaction-date-heading {
+	display: flex;
+	justify-content: space-between;
+	gap: 0.75rem;
+	flex-wrap: wrap;
+}
+.daily-subtotals {
+	display: flex;
+	gap: 1rem;
+	flex-wrap: wrap;
+	font-size: 0.875rem;
+	font-weight: 500;
+}
+@media (max-width: 480px) {
+	.period-selector {
+		gap: 0.5rem;
+	}
+	.month-navigation {
+		gap: 0.35rem;
+	}
+	.period-selector input {
+		min-width: 0;
 	}
 }

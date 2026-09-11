@@ -1,4 +1,5 @@
 import type { Account, MoneyFormatter, ReportItem, Transaction, View } from "../types";
+import { periodLabel as formatPeriodLabel } from "../utils/period";
 import { TransactionRows } from "./TransactionRows";
 
 type DashboardProps = {
@@ -11,7 +12,6 @@ type DashboardProps = {
 	report: ReportItem[];
 	income: number;
 	expenses: number;
-	balance: number;
 	money: MoneyFormatter;
 	onAccountSelect: (accountId: number) => void;
 	onCategorySelect: (categoryId: number) => void;
@@ -28,27 +28,13 @@ export function Dashboard({
 	report,
 	income,
 	expenses,
-	balance,
 	money,
 	onAccountSelect,
 	onCategorySelect,
 	onNavigate,
 }: DashboardProps) {
 	const largestCategory = Math.max(...report.map((item) => item.total), 1);
-	const formatDate = (date: string) =>
-		new Date(`${date}T00:00:00`).toLocaleDateString("en-US", {
-			month: "short",
-			day: "numeric",
-			year: "numeric",
-		});
-	const periodLabel =
-		fromDate && toDate
-			? `${formatDate(fromDate)} – ${formatDate(toDate)}`
-			: fromDate
-				? `From ${formatDate(fromDate)}`
-				: toDate
-					? `Through ${formatDate(toDate)}`
-					: "All time";
+	const periodLabel = formatPeriodLabel(fromDate, toDate);
 	return (
 		<>
 			<section className="hero">
@@ -56,11 +42,6 @@ export function Dashboard({
 				<p className="muted">All accounts and categories · {periodLabel}</p>
 			</section>
 			<section className="stats">
-				<div className="stat-card total-balance-stat">
-					<span className="stat-label">Total balance</span>
-					<strong>{money(balance)}</strong>
-					<small>Current balance across all accounts</small>
-				</div>
 				<div className="stat-card">
 					<span className="stat-label">Income</span>
 					<strong className="income">{money(income)}</strong>
@@ -71,13 +52,20 @@ export function Dashboard({
 					<strong className="expense">{money(expenses)}</strong>
 					<small>{periodLabel}</small>
 				</div>
+				<div className="stat-card">
+					<span className="stat-label">Net change</span>
+					<strong className={income - expenses >= 0 ? "income" : "expense"}>
+						{money(income - expenses)}
+					</strong>
+					<small>{periodLabel}</small>
+				</div>
 			</section>
 			<div className="dashboard-grid">
 				<section className="panel">
 					<div className="panel-heading">
 						<div>
 							<p className="eyebrow">YOUR ACCOUNTS</p>
-							<h3>Balances</h3>
+							<h3>Current balances</h3>
 						</div>
 						<button className="text-button" onClick={() => onNavigate("accounts")}>
 							Manage
@@ -168,6 +156,7 @@ export function Dashboard({
 				</div>
 				<TransactionRows
 					transactions={transactions.slice(0, 5)}
+					emptyTitle={`No transactions in ${periodLabel}`}
 					accountNames={accountNames}
 					categoryNames={categoryNames}
 					money={money}

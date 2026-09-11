@@ -4,11 +4,16 @@ import { accountQuery, categoryQuery, reportQuery, transactionQuery } from "../a
 import type { DashboardFilters, View } from "../types";
 import { errorMessage } from "../utils/errors";
 
+import { currentMonth, monthRange } from "../utils/period";
+
 const emptyFilters: DashboardFilters = { account: "", type: "", category: "", from: "", to: "" };
 
 export function useMoneyManagerData(view: View) {
 	const client = useQueryClient();
-	const [filters, setFilters] = useState<DashboardFilters>(emptyFilters);
+	const [filters, setFilters] = useState<DashboardFilters>(() => ({
+		...emptyFilters,
+		...monthRange(currentMonth()),
+	}));
 	const [actionError, setActionError] = useState("");
 	const [dismissedFetchError, setDismissedFetchError] = useState<Error | undefined>(undefined);
 	const needsAccounts = view === "dashboard" || view === "transactions" || view === "accounts";

@@ -9,6 +9,7 @@ type TransactionRowContext = {
 
 type TransactionRowsProps = TransactionRowContext & {
 	transactions: Transaction[];
+	subtotalTransactions?: Transaction[];
 	groupByCreatedAt?: boolean;
 	emptyTitle?: string;
 	emptyDescription?: string;
@@ -24,6 +25,7 @@ function formatTransactionDate(value: string) {
 
 export function TransactionRows({
 	transactions,
+	subtotalTransactions,
 	accountNames,
 	categoryNames,
 	money,
@@ -41,6 +43,16 @@ export function TransactionRows({
 		);
 
 	const groups = new Map<string, Transaction[]>();
+	const subtotals = new Map<string, { income: number; expense: number }>();
+	for (const transaction of subtotalTransactions ?? []) {
+		const key = formatTransactionDate(
+			groupByCreatedAt ? transaction.created_at : transaction.occurred_at,
+		);
+		const totals = subtotals.get(key) ?? { income: 0, expense: 0 };
+		if (transaction.type === "income" || transaction.type === "expense")
+			totals[transaction.type] += transaction.amount;
+		subtotals.set(key, totals);
+	}
 	for (const transaction of transactions) {
 		const dateLabel = formatTransactionDate(
 			groupByCreatedAt ? transaction.created_at : transaction.occurred_at,
@@ -56,6 +68,16 @@ export function TransactionRows({
 				<section className="transaction-date-group" key={dateLabel}>
 					<h4 className="transaction-date-heading">
 						{groupByCreatedAt ? `Added ${dateLabel}` : dateLabel}
+						{subtotals.has(dateLabel) && (
+							<span className="daily-subtotals">
+								<span className="income">
+									Income {money(subtotals.get(dateLabel)!.income)}
+								</span>
+								<span className="expense">
+									Expenses {money(subtotals.get(dateLabel)!.expense)}
+								</span>
+							</span>
+						)}
 					</h4>
 					<div className="transaction-date-list">
 						{group.map((transaction) => (

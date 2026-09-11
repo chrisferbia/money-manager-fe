@@ -3,7 +3,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, focusManager } from "@tanstack/react-query";
 import App from "../src/react-app/App";
-import { createQueryClient } from "../src/react-app/api/queries";
+import { createQueryClient, reportQuery, transactionQuery } from "../src/react-app/api/queries";
+import { currentMonth, monthRange } from "../src/react-app/utils/period";
 import { request } from "../src/react-app/api/client";
 
 vi.mock("../src/react-app/api/client", () => ({ request: vi.fn() }));
@@ -53,7 +54,7 @@ async function start() {
 		</QueryClientProvider>,
 	);
 	await waitFor(() => expect(screen.queryByText("Loading your ledger")).toBeNull());
-	await screen.findByText("Balances");
+	await screen.findByText("Current balances");
 }
 
 it("reuses fresh data when switching Overview and Transactions", async () => {
@@ -62,7 +63,7 @@ it("reuses fresh data when switching Overview and Transactions", async () => {
 	fireEvent.click(screen.getByRole("button", { name: "Transactions", exact: true }));
 	await screen.findByText("Transaction history");
 	fireEvent.click(screen.getByRole("button", { name: "Overview", exact: true }));
-	await screen.findByText("Balances");
+	await screen.findByText("Current balances");
 	expect(mockRequest.mock.calls.length).toBe(before);
 });
 
@@ -71,7 +72,7 @@ it("preserves category drilldown and caches matching filters", async () => {
 	fireEvent.click(screen.getByRole("button", { name: "View transactions for Food" }));
 	await waitFor(() =>
 		expect(
-			mockRequest.mock.calls.some(([path]) => path === "/transactions?category_id=1"),
+			mockRequest.mock.calls.some(([path]) => path.startsWith("/transactions?category_id=1")),
 		).toBe(true),
 	);
 	await waitFor(() => expect(screen.queryByText("Loading your ledger")).toBeNull());
@@ -104,7 +105,9 @@ it("keeps amount focus and refreshes balances after saving without fetching cate
 	);
 	expect(screen.getAllByText(/9\.000/).length).toBeGreaterThan(0);
 	expect(count("/categories")).toBe(categoriesBefore);
-	expect(client.getQueryState(["reports", ""])?.isInvalidated).toBe(true);
+	expect(
+		client.getQueryState(reportQuery(monthRange(currentMonth())).queryKey)?.isInvalidated,
+	).toBe(true);
 });
 
 it("keeps search and expanded filters during background refresh", async () => {
@@ -169,21 +172,21 @@ it("does not show a slow old filter response under the newly selected filter", a
 	});
 	const original = mockRequest.getMockImplementation()!;
 	mockRequest.mockImplementation(async (path, options) => {
-		if (path === "/transactions?type=expense") return oldResponse;
+		if (path.startsWith("/transactions?type=expense")) return oldResponse;
 		return original(path, options);
 	});
 	const typeSelect = screen.getByLabelText("Type");
 	fireEvent.change(typeSelect, { target: { value: "expense" } });
 	await waitFor(() =>
-		expect(mockRequest.mock.calls.some(([path]) => path === "/transactions?type=expense")).toBe(
-			true,
-		),
+		expect(
+			mockRequest.mock.calls.some(([path]) => path.startsWith("/transactions?type=expense")),
+		).toBe(true),
 	);
 	fireEvent.change(typeSelect, { target: { value: "income" } });
 	await waitFor(() =>
-		expect(mockRequest.mock.calls.some(([path]) => path === "/transactions?type=income")).toBe(
-			true,
-		),
+		expect(
+			mockRequest.mock.calls.some(([path]) => path.startsWith("/transactions?type=income")),
+		).toBe(true),
 	);
 	await act(async () => {
 		resolveOld([
@@ -205,7 +208,12 @@ it("revalidates expired shared transactions on navigation", async () => {
 	await start();
 	const before = count("/transactions");
 	act(() => {
-		client.setQueryData(["transactions", ""], [], { updatedAt: Date.now() - 31_000 });
+		client.setQueryData(
+			transactionQuery({ account: "", type: "", category: "", ...monthRange(currentMonth()) })
+				.queryKey,
+			[],
+			{ updatedAt: Date.now() - 31_000 },
+		);
 	});
 	fireEvent.click(screen.getByRole("button", { name: "Transactions", exact: true }));
 	await waitFor(() => expect(count("/transactions")).toBe(before + 1));
@@ -236,17 +244,17 @@ it("clears both report dates together and preserves the category drilldown", asy
 	await start();
 	const user = userEvent.setup();
 	await user.click(screen.getByRole("button", { name: "Reports", exact: true }));
-	fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-09-01" } });
+	fireEvent.change(screen.getByLabelText("Period mode"), { target: { value: "custom" } });
+	fireEvent.change(screen.getByLabelText("Period from"), { target: { value: "2026-09-01" } });
 	await waitFor(() => expect(screen.queryByText("Loading your ledger")).toBeNull());
-	fireEvent.change(screen.getByLabelText("To"), { target: { value: "2026-09-11" } });
+	fireEvent.change(screen.getByLabelText("Period to"), { target: { value: "2026-09-11" } });
 	await waitFor(() => expect(screen.queryByText("Loading your ledger")).toBeNull());
-	await user.click(screen.getByRole("button", { name: "Clear dates" }));
-	expect((screen.getByLabelText("From") as HTMLInputElement).value).toBe("");
-	expect((screen.getByLabelText("To") as HTMLInputElement).value).toBe("");
+	await user.selectOptions(screen.getByLabelText("Period mode"), "all");
+	expect((screen.getByLabelText("Period mode") as HTMLSelectElement).value).toBe("all");
 	await user.click(screen.getByRole("button", { name: "View transactions for Food" }));
 	await waitFor(() =>
 		expect(
-			mockRequest.mock.calls.some(([path]) => path === "/transactions?category_id=1"),
+			mockRequest.mock.calls.some(([path]) => path.startsWith("/transactions?category_id=1")),
 		).toBe(true),
 	);
 });
@@ -303,12 +311,13 @@ it("Overview totals and chart share dates while retaining transaction-only filte
 		await user.selectOptions(screen.getByLabelText(label), value);
 		await waitFor(() => expect(screen.queryByText("Loading your ledger")).toBeNull());
 	}
-	for (const label of ["Transactions from date", "Transactions to date"]) {
+	await user.selectOptions(screen.getByLabelText("Period mode"), "custom");
+	for (const label of ["Period from", "Period to"]) {
 		fireEvent.change(screen.getByLabelText(label), { target: { value: "2026-09-11" } });
 		await waitFor(() => expect(screen.queryByText("Loading your ledger")).toBeNull());
 	}
 	await user.click(screen.getByRole("button", { name: "Overview", exact: true }));
-	await screen.findByText("All accounts and categories · Sep 11, 2026 – Sep 11, 2026");
+	await screen.findByText("All accounts and categories · 2026-09-11 – 2026-09-11");
 	await waitFor(() => expect(screen.queryByText("Loading your ledger")).toBeNull());
 	const stats = Array.from(document.querySelectorAll(".stat-card"));
 	expect(stats.find((card) => card.textContent?.includes("Income"))?.textContent).toContain(
@@ -338,9 +347,37 @@ it("Overview totals and chart share dates while retaining transaction-only filte
 		["Filter by account", "1"],
 		["Filter by category", "1"],
 		["Filter by type", "expense"],
-		["Transactions from date", "2026-09-11"],
-		["Transactions to date", "2026-09-11"],
+		["Period from", "2026-09-11"],
+		["Period to", "2026-09-11"],
 	]) {
 		expect((screen.getByLabelText(label) as HTMLInputElement).value).toBe(value);
 	}
+});
+
+it("defaults to this month and preserves the selected month across navigation and filter clearing", async () => {
+	await start();
+	expect((screen.getByLabelText("Selected month") as HTMLInputElement).value).toBe(
+		currentMonth(),
+	);
+	expect(screen.queryByText("Total balance")).toBeNull();
+	expect(screen.getByText("Net change")).toBeTruthy();
+	fireEvent.change(screen.getByLabelText("Selected month"), { target: { value: "2028-02" } });
+	await waitFor(() => expect(screen.queryByText("Loading your ledger")).toBeNull());
+	fireEvent.click(screen.getByRole("button", { name: "Previous month" }));
+	await waitFor(() => expect(screen.queryByText("Loading your ledger")).toBeNull());
+	expect((screen.getByLabelText("Selected month") as HTMLInputElement).value).toBe("2028-01");
+	fireEvent.click(screen.getByRole("button", { name: "Next month" }));
+	await waitFor(() => expect(screen.queryByText("Loading your ledger")).toBeNull());
+	fireEvent.click(screen.getByRole("button", { name: "View transactions for Food" }));
+	await waitFor(() => expect(screen.queryByText("Loading your ledger")).toBeNull());
+	expect((screen.getByLabelText("Selected month") as HTMLInputElement).value).toBe("2028-02");
+	fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+	await waitFor(() => expect(screen.queryByText("Loading your ledger")).toBeNull());
+	expect((screen.getByLabelText("Selected month") as HTMLInputElement).value).toBe("2028-02");
+	expect(screen.getByText("No transactions in February 2028")).toBeTruthy();
+	fireEvent.click(screen.getByRole("button", { name: "This month" }));
+	await waitFor(() => expect(screen.queryByText("Loading your ledger")).toBeNull());
+	expect((screen.getByLabelText("Selected month") as HTMLInputElement).value).toBe(
+		currentMonth(),
+	);
 });

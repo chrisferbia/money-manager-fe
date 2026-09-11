@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
+import { PeriodSelector } from "./components/PeriodSelector";
 import { useMoneyManagerData } from "./hooks/useMoneyManagerData";
 import { useMoneyManagerActions } from "./hooks/useMoneyManagerActions";
 import { AccountsView } from "./components/AccountsView";
@@ -58,7 +59,6 @@ function App() {
 	const expenses = transactions
 		.filter((item) => item.type === "expense")
 		.reduce((sum, item) => sum + item.amount, 0);
-	const balance = accounts.reduce((sum, item) => sum + (item.balance ?? 0), 0);
 	const money = createMoneyFormatter(currency);
 	const actions = useMoneyManagerActions({
 		accounts,
@@ -117,7 +117,13 @@ function App() {
 		setAddTransactionRequest(++nextAddTransactionRequest.current);
 	}
 	function openAccountTransactions(accountId: number) {
-		setFilters({ account: String(accountId), type: "", category: "", from: "", to: "" });
+		setFilters({
+			account: String(accountId),
+			type: "",
+			category: "",
+			from: filters.from,
+			to: filters.to,
+		});
 		selectView("transactions");
 	}
 	function openCategoryTransactions(categoryId: number) {
@@ -142,6 +148,13 @@ function App() {
 			onViewChange={selectView}
 			onDismissError={() => setError("")}
 		>
+			{["dashboard", "transactions", "reports"].includes(view) && (
+				<PeriodSelector
+					from={filters.from}
+					to={filters.to}
+					onChange={(range) => setFilters((current) => ({ ...current, ...range }))}
+				/>
+			)}
 			{view === "dashboard" && (
 				<Dashboard
 					fromDate={filters.from}
@@ -153,11 +166,19 @@ function App() {
 					report={report}
 					income={income}
 					expenses={expenses}
-					balance={balance}
 					money={money}
 					onAccountSelect={openAccountTransactions}
 					onCategorySelect={openCategoryTransactions}
-					onNavigate={selectView}
+					onNavigate={(next) => {
+						if (next === "transactions")
+							setFilters((current) => ({
+								...current,
+								account: "",
+								type: "",
+								category: "",
+							}));
+						selectView(next);
+					}}
 				/>
 			)}
 			{view === "transactions" && (
@@ -206,10 +227,6 @@ function App() {
 				<ReportsView
 					report={report}
 					money={money}
-					fromDate={filters.from}
-					toDate={filters.to}
-					setFromDate={(value) => setFilters((current) => ({ ...current, from: value }))}
-					setToDate={(value) => setFilters((current) => ({ ...current, to: value }))}
 					onCategorySelect={openCategoryTransactions}
 				/>
 			)}

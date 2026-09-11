@@ -3,22 +3,10 @@ import type { MoneyFormatter, ReportItem } from "../types";
 type ReportsViewProps = {
 	report: ReportItem[];
 	money: MoneyFormatter;
-	fromDate: string;
-	toDate: string;
-	setFromDate: (value: string) => void;
-	setToDate: (value: string) => void;
 	onCategorySelect: (categoryId: number) => void;
 };
 
-export function ReportsView({
-	report,
-	money,
-	fromDate,
-	toDate,
-	setFromDate,
-	setToDate,
-	onCategorySelect,
-}: ReportsViewProps) {
+export function ReportsView({ report, money, onCategorySelect }: ReportsViewProps) {
 	const largest = Math.max(...report.map((item) => item.total), 1);
 	return (
 		<>
@@ -30,33 +18,6 @@ export function ReportsView({
 				</div>
 			</section>
 			<section className="panel report-panel">
-				<div className="date-filters">
-					<label>
-						From
-						<input
-							type="date"
-							value={fromDate}
-							onChange={(event) => setFromDate(event.target.value)}
-						/>
-					</label>
-					<label>
-						To
-						<input
-							type="date"
-							value={toDate}
-							onChange={(event) => setToDate(event.target.value)}
-						/>
-					</label>
-					<button
-						className="cancel-button"
-						onClick={() => {
-							setFromDate("");
-							setToDate("");
-						}}
-					>
-						Clear dates
-					</button>
-				</div>
 				{report.length ? (
 					<div className="report-list">
 						{report.map((item) => (
