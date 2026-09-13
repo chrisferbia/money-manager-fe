@@ -1,3 +1,4 @@
+import { monthRange } from "./utils/period";
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import { PeriodSelector } from "./components/PeriodSelector";
@@ -157,6 +158,9 @@ function App() {
 			)}
 			{view === "dashboard" && (
 				<Dashboard
+					onMonthSelect={(month) =>
+						setFilters((current) => ({ ...current, ...monthRange(month) }))
+					}
 					fromDate={filters.from}
 					toDate={filters.to}
 					accounts={accounts}

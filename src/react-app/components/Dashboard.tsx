@@ -1,8 +1,10 @@
+import { IncomeExpenseChart } from "./IncomeExpenseChart";
 import type { Account, MoneyFormatter, ReportItem, Transaction, View } from "../types";
 import { periodLabel as formatPeriodLabel } from "../utils/period";
 import { TransactionRows } from "./TransactionRows";
 
 type DashboardProps = {
+	onMonthSelect: (month: string) => void;
 	fromDate: string;
 	toDate: string;
 	accounts: Account[];
@@ -19,6 +21,7 @@ type DashboardProps = {
 };
 
 export function Dashboard({
+	onMonthSelect,
 	fromDate,
 	toDate,
 	accounts,
@@ -163,6 +166,12 @@ export function Dashboard({
 					onEdit={() => onNavigate("transactions")}
 				/>
 			</section>
+			<IncomeExpenseChart
+				from={fromDate}
+				to={toDate}
+				money={money}
+				onMonthSelect={onMonthSelect}
+			/>
 		</>
 	);
 }

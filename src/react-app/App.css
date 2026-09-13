@@ -2227,3 +2227,91 @@ footer {
 	font-size: 11px;
 	color: #818a83;
 }
+
+.income-expense-chart {
+	margin-top: 24px;
+}
+.comparison-legend,
+.comparison-detail {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 16px;
+	font-size: 13px;
+}
+.comparison-detail {
+	margin-bottom: 16px;
+	min-height: 20px;
+}
+.comparison-plot {
+	display: grid;
+	grid-template-columns: repeat(6, minmax(0, 1fr));
+	gap: 8px;
+	background: repeating-linear-gradient(to top, transparent 0, transparent 49px, #e8e7df 50px);
+}
+.comparison-month {
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	min-width: 0;
+	padding: 8px 4px 0;
+	border: 1px solid transparent;
+	border-radius: 8px;
+	background: transparent;
+	color: #59635d;
+}
+.comparison-month[aria-pressed="true"] {
+	background: #e3eee766;
+	border-color: #b8cabe;
+}
+.comparison-month:hover,
+.comparison-month:focus-visible {
+	background: #e3eee7;
+	outline: 2px solid #729683;
+	outline-offset: 1px;
+}
+.comparison-bars {
+	display: flex;
+	justify-content: center;
+	align-items: flex-end;
+	gap: 5px;
+	height: 180px;
+	width: 100%;
+}
+.comparison-bars > span {
+	width: 28%;
+	max-width: 32px;
+	border-radius: 4px 4px 0 0;
+}
+.comparison-income {
+	background: #277159;
+}
+.comparison-expense {
+	background: #b45c48;
+}
+.comparison-month-label {
+	display: block;
+	width: 100%;
+	padding-block: 10px;
+	font-size: 12px;
+}
+.comparison-hint {
+	margin: 12px 0 0;
+	font-size: 12px;
+	color: #818a83;
+}
+@media (max-width: 480px) {
+	.income-expense-chart .panel-heading {
+		flex-wrap: wrap;
+		gap: 12px;
+	}
+	.comparison-plot {
+		gap: 3px;
+	}
+	.comparison-bars {
+		gap: 3px;
+		height: 140px;
+	}
+	.comparison-month-label {
+		font-size: 11px;
+	}
+}
