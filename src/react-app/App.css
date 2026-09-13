@@ -570,7 +570,7 @@ button:disabled {
 }
 .account-card-header {
 	display: grid;
-	grid-template-columns: minmax(104px, 0.8fr) minmax(0, 1.6fr) auto auto;
+	grid-template-columns: minmax(104px, 24%) minmax(0, 1fr) auto auto;
 	align-items: center;
 	gap: 12px;
 }
@@ -1761,7 +1761,7 @@ footer {
 		padding: 10px 0;
 	}
 	.account-card-header {
-		grid-template-columns: minmax(90px, 0.8fr) minmax(0, 1.4fr) auto auto;
+		grid-template-columns: 90px minmax(0, 1fr) auto auto;
 		gap: 10px;
 	}
 	.account-card-actions .delete-button::after,
@@ -2116,7 +2116,7 @@ footer {
 }
 .month-navigation {
 	display: grid;
-	grid-template-columns: 32px minmax(0, 174px) 32px;
+	grid-template-columns: 32px minmax(0, 174px) 32px auto;
 	align-items: center;
 	gap: 0.25rem;
 	max-width: 100%;
@@ -2129,13 +2129,13 @@ footer {
 	width: 100%;
 	min-width: 0;
 }
-.period-selector > .text-button {
+.period-selector .text-button {
 	min-height: 32px;
 	white-space: nowrap;
 }
 .period-selector input,
 .period-selector select,
-.month-navigation button {
+.month-navigation button:not(.text-button) {
 	font-family: inherit;
 	font-size: 13px;
 	line-height: 1.25;
@@ -2169,13 +2169,61 @@ footer {
 	font-weight: 500;
 }
 @media (max-width: 480px) {
+	.period-selector > select {
+		width: 96px;
+	}
 	.period-selector {
 		gap: 0.5rem;
 	}
 	.month-navigation {
-		gap: 0.35rem;
+		grid-template-columns: 28px minmax(0, 144px) 28px auto;
+		gap: 4px;
+	}
+	.month-navigation > .text-button {
+		padding-inline: 4px;
 	}
 	.period-selector input {
 		min-width: 0;
 	}
+}
+
+.description-autocomplete {
+	position: relative;
+	margin-bottom: 15px;
+}
+.description-autocomplete > label {
+	margin-bottom: 0;
+}
+.description-suggestions {
+	position: absolute;
+	z-index: 10;
+	inset: auto 0 auto 0;
+	max-height: 160px;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	list-style: none;
+	margin: 4px 0 0;
+	padding: 4px;
+	border: 1px solid #deded6;
+	border-radius: 8px;
+	background: #fff;
+	box-shadow: 0 6px 18px #203b311a;
+}
+.description-suggestions > li {
+	padding: 7px 9px;
+	font-size: 13px;
+	border-radius: 4px;
+	cursor: pointer;
+	overflow-wrap: anywhere;
+}
+.description-suggestions > li:hover,
+.description-suggestions > li[aria-selected="true"] {
+	background: #e8efe9;
+	color: #203b31;
+}
+.description-loading {
+	display: block;
+	margin-top: 4px;
+	font-size: 11px;
+	color: #818a83;
 }

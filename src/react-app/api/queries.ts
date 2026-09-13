@@ -22,6 +22,19 @@ export const categoryQuery = () =>
 		staleTime: 5 * 60_000,
 	});
 
+export function descriptionSuggestionsQuery(query: string) {
+	const search = query.trim();
+	const params = new URLSearchParams({ limit: "20" });
+	if (search) params.set("q", search);
+	return queryOptions({
+		queryKey: ["description-suggestions", search],
+		queryFn: ({ signal }) =>
+			request<string[]>(`/transactions/descriptions?${params}`, { signal }),
+		staleTime: 30_000,
+		retry: false,
+	});
+}
+
 // The backend stores and compares UTC timestamps at whole-second precision.
 function localDateBoundary(date: string, time: string) {
 	return new Date(date + "T" + time).toISOString().replace(".000Z", "Z");

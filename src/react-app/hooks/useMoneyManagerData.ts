@@ -72,6 +72,7 @@ export function useMoneyManagerData(view: View) {
 	// Invalidate every cached filter variant; only visible queries refetch immediately.
 	const refreshTransactions = useCallback(async () => {
 		await Promise.all([
+			client.invalidateQueries({ queryKey: ["description-suggestions"], refetchType: "none" }),
 			client.invalidateQueries({ queryKey: ["transactions"] }),
 			client.invalidateQueries({ queryKey: ["accounts"] }),
 			client.invalidateQueries({ queryKey: ["reports"] }),

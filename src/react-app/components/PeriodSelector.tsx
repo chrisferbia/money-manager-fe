@@ -53,6 +53,13 @@ export function PeriodSelector({ from, to, onChange }: Props) {
 					>
 						→
 					</button>
+					<button
+						className="text-button"
+						type="button"
+						onClick={() => chooseMonth(currentMonth())}
+					>
+						This month
+					</button>
 				</div>
 			)}
 			{mode === "custom" && (
@@ -92,13 +99,15 @@ export function PeriodSelector({ from, to, onChange }: Props) {
 					</label>
 				</div>
 			)}
-			<button
-				className="text-button"
-				type="button"
-				onClick={() => chooseMonth(currentMonth())}
-			>
-				This month
-			</button>
+			{mode !== "month" && (
+				<button
+					className="text-button"
+					type="button"
+					onClick={() => chooseMonth(currentMonth())}
+				>
+					This month
+				</button>
+			)}
 		</section>
 	);
 }

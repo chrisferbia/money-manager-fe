@@ -71,10 +71,10 @@ export function TransactionRows({
 						{subtotals.has(dateLabel) && (
 							<span className="daily-subtotals">
 								<span className="income">
-									Income {money(subtotals.get(dateLabel)!.income)}
+									{money(subtotals.get(dateLabel)!.income)}
 								</span>
 								<span className="expense">
-									Expenses {money(subtotals.get(dateLabel)!.expense)}
+									{money(subtotals.get(dateLabel)!.expense)}
 								</span>
 							</span>
 						)}

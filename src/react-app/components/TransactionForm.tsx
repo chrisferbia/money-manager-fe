@@ -1,7 +1,9 @@
+import { DescriptionAutocomplete } from "./DescriptionAutocomplete";
 import type { Dispatch, FormEvent, SetStateAction } from "react";
 import type { Account, Category, EntryForm, EntryType, Transaction } from "../types";
 
 type TransactionFormProps = {
+	formOpen: boolean;
 	accounts: Account[];
 	entry: EntryForm;
 	setEntry: Dispatch<SetStateAction<EntryForm>>;
@@ -20,6 +22,7 @@ function entryTypeLabel(type: EntryType) {
 }
 
 export function TransactionForm({
+	formOpen,
 	accounts,
 	entry,
 	setEntry,
@@ -142,14 +145,11 @@ export function TransactionForm({
 					/>
 				</label>
 			</div>
-			<label>
-				Description <span className="optional">(optional)</span>
-				<input
-					value={entry.description}
-					onChange={(event) => update({ description: event.target.value })}
-					placeholder="What was this for?"
-				/>
-			</label>
+			<DescriptionAutocomplete
+				value={entry.description}
+				onChange={(description) => update({ description })}
+				formOpen={formOpen}
+			/>
 			<label>
 				Counterparty <span className="optional">(optional)</span>
 				<input

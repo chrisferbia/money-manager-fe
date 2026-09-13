@@ -250,6 +250,7 @@ export function TransactionsView({
 						</button>
 					</div>
 					<TransactionForm
+						formOpen={formOpen}
 						accounts={accounts}
 						entry={entry}
 						setEntry={setEntry}
