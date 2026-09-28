@@ -1,6 +1,16 @@
 #root {
 	min-height: 100vh;
 }
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
 .app-shell {
 	max-width: 1180px;
 	margin: 0 auto;
@@ -796,6 +806,194 @@ button:disabled {
 }
 .report-panel {
 	max-width: 800px;
+	margin-bottom: 18px;
+}
+.savings-trend-panel {
+	margin-bottom: 18px;
+	overflow: hidden;
+}
+.savings-trend-heading {
+	align-items: flex-start;
+}
+.savings-trend-heading .muted {
+	margin: 7px 0 0;
+}
+.savings-total {
+	display: grid;
+	justify-items: end;
+	gap: 5px;
+	text-align: right;
+}
+.savings-total strong {
+	color: #203b31;
+	font:
+		600 24px/1.15 Georgia,
+		serif;
+}
+.savings-total span {
+	color: #818a83;
+	font-size: 11px;
+}
+.savings-total .positive,
+.savings-month-change .positive {
+	color: #277159;
+}
+.savings-total .negative,
+.savings-month-change .negative {
+	color: #b45c48;
+}
+.savings-chart {
+	margin: 0;
+}
+.savings-chart svg {
+	display: block;
+	width: 100%;
+	height: auto;
+	min-height: 230px;
+}
+.savings-grid-line {
+	stroke: #e4e5df;
+	stroke-width: 1;
+}
+.savings-chart-area {
+	fill: #dfeae3;
+	opacity: 0.62;
+}
+.savings-chart-line {
+	fill: none;
+	stroke: #277159;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-width: 3;
+}
+.savings-chart-point {
+	fill: #fbfaf7;
+	stroke: #277159;
+	stroke-width: 2.5;
+}
+.savings-chart-point.active {
+	fill: #277159;
+	stroke: #fbfaf7;
+}
+.savings-chart-hit-area {
+	fill: transparent;
+	stroke: transparent;
+}
+.savings-chart-point-target {
+	cursor: pointer;
+	outline: none;
+}
+.savings-chart-point-target:focus .savings-chart-point {
+	fill: #277159;
+	stroke: #fbfaf7;
+	stroke-width: 3;
+}
+.savings-latest-label text {
+	fill: #203b31;
+	font-size: 10px;
+	font-weight: 800;
+}
+.savings-chart-tooltip {
+	pointer-events: none;
+}
+.savings-chart-tooltip rect {
+	fill: #203b31;
+	filter: drop-shadow(0 3px 5px rgba(36, 48, 43, 0.2));
+}
+.savings-chart-tooltip text {
+	fill: #f8f5ed;
+	font-size: 9px;
+}
+.savings-chart-tooltip .tooltip-month {
+	font-weight: 800;
+}
+.savings-chart-tooltip .tooltip-balance {
+	font-size: 10px;
+	font-weight: 700;
+}
+.savings-chart-tooltip .tooltip-positive {
+	fill: #a9ddbe;
+}
+.savings-chart-tooltip .tooltip-negative {
+	fill: #f3b3a5;
+}
+.savings-chart-label {
+	fill: #818a83;
+	font-size: 10px;
+}
+.savings-chart figcaption {
+	margin-top: 4px;
+	color: #929a93;
+	font-size: 10px;
+	text-align: right;
+}
+.savings-month-changes {
+	display: grid;
+	grid-template-columns: repeat(6, minmax(0, 1fr));
+	gap: 7px;
+	margin-top: 18px;
+	padding-bottom: 5px;
+}
+.savings-month-change {
+	display: grid;
+	gap: 4px;
+	padding: 8px;
+	border: 1px solid #ecebe5;
+	border-radius: 8px;
+	background: #f7f7f3;
+}
+.savings-month-change span {
+	color: #818a83;
+	font-size: 10px;
+}
+.savings-month-change strong {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	color: #24302b;
+	font-size: 11px;
+	white-space: nowrap;
+}
+.savings-month-change small {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	color: #818a83;
+	font-size: 9px;
+	white-space: nowrap;
+}
+.report-section-heading {
+	margin-bottom: 8px;
+}
+.report-comparison-legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 18px;
+	margin-top: 10px;
+	color: #69746d;
+	font-size: 11px;
+}
+.report-comparison-legend span {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+.report-comparison-legend i {
+	display: inline-block;
+	width: 18px;
+	border-radius: 999px;
+}
+.report-legend-current {
+	height: 7px;
+	background: #2d7961;
+}
+.report-legend-previous {
+	height: 4px;
+	background: #b7beb9;
+}
+.report-comparison-note {
+	margin: 8px 0 0;
+	font-size: 11px;
 }
 .date-filters {
 	display: flex;
@@ -840,6 +1038,9 @@ button:disabled {
 .report-row > div {
 	flex: 1;
 }
+.report-row > .report-comparison-values {
+	flex: 0 0 210px;
+}
 .report-row strong {
 	display: block;
 	margin-bottom: 9px;
@@ -851,6 +1052,49 @@ button:disabled {
 	font:
 		600 17px Georgia,
 		serif;
+}
+.report-paired-bars {
+	display: grid;
+	gap: 5px;
+}
+.report-current-track,
+.report-previous-track {
+	height: 7px;
+	margin-top: 0;
+}
+.report-previous-track {
+	height: 4px;
+}
+.progress-fill.report-current-fill {
+	background: #2d7961;
+}
+.progress-fill.report-previous-fill {
+	background: #b7beb9;
+}
+.report-comparison-values {
+	display: grid;
+	justify-items: end;
+	gap: 3px;
+	text-align: right;
+}
+.report-comparison-values span,
+.report-comparison-values small {
+	font-size: 10px;
+}
+.report-comparison-values span {
+	color: #818a83;
+}
+.report-comparison-values small {
+	font-weight: 700;
+}
+.report-comparison-values .increase {
+	color: #b84b35;
+}
+.report-comparison-values .decrease {
+	color: #2d7961;
+}
+.report-comparison-values .flat {
+	color: #818a83;
 }
 .preference-card {
 	display: grid;
@@ -1581,6 +1825,20 @@ footer {
 		width: 100%;
 		justify-content: flex-start;
 	}
+	.savings-trend-heading {
+		display: grid;
+		gap: 16px;
+	}
+	.savings-total {
+		justify-items: start;
+		text-align: left;
+	}
+	.savings-chart svg {
+		min-height: 0;
+	}
+	.savings-month-changes {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
 	input,
 	select {
 		font-size: 16px;
@@ -1782,6 +2040,9 @@ footer {
 }
 
 @media (max-width: 480px) {
+	.savings-month-changes {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
 	.floating-add-button {
 		display: none !important;
 	}
@@ -1942,6 +2203,12 @@ footer {
 	}
 	.report-row b {
 		font-size: 15px;
+	}
+	.report-row > .report-comparison-values {
+		flex-basis: 150px;
+	}
+	.report-comparison-values small {
+		line-height: 1.35;
 	}
 	.api-error {
 		gap: 8px;

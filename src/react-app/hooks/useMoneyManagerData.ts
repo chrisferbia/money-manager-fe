@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { accountQuery, categoryQuery, reportQuery, transactionQuery } from "../api/queries";
+import {
+	accountQuery,
+	categoryQuery,
+	reportQuery,
+	savingsHistoryQuery,
+	transactionQuery,
+} from "../api/queries";
 import type { DashboardFilters, View } from "../types";
 import { errorMessage } from "../utils/errors";
 
-import { currentMonth, monthRange } from "../utils/period";
+import { currentMonth, monthRange, selectedMonth, shiftMonth } from "../utils/period";
 
 const emptyFilters: DashboardFilters = { account: "", type: "", category: "", from: "", to: "" };
 
@@ -20,6 +26,13 @@ export function useMoneyManagerData(view: View) {
 	const needsCategories = view === "dashboard" || view === "transactions" || view === "settings";
 	const needsTransactions = view === "dashboard" || view === "transactions";
 	const needsReport = view === "dashboard" || view === "reports";
+	const needsSavingsHistory = view === "reports";
+	const reportMonth = selectedMonth(filters.from, filters.to);
+	const previousReportFilters = useMemo(
+		() => (reportMonth ? monthRange(shiftMonth(reportMonth, -1)) : emptyFilters),
+		[reportMonth],
+	);
+	const needsPreviousReport = view === "reports" && Boolean(reportMonth);
 	const transactionFilters = useMemo(
 		() =>
 			view === "dashboard"
@@ -34,6 +47,11 @@ export function useMoneyManagerData(view: View) {
 		enabled: needsTransactions,
 	});
 	const report = useQuery({ ...reportQuery(filters), enabled: needsReport });
+	const previousReport = useQuery({
+		...reportQuery(previousReportFilters),
+		enabled: needsPreviousReport,
+	});
+	const savingsHistory = useQuery({ ...savingsHistoryQuery(), enabled: needsSavingsHistory });
 
 	// This shared hook stays mounted across pages. Recheck freshness on navigation;
 	// fetchQuery reuses fresh cache entries and deduplicates in-flight requests.
@@ -46,12 +64,17 @@ export function useMoneyManagerData(view: View) {
 			void client.fetchQuery(transactionQuery(transactionFilters)).catch(() => {});
 		if (view === "dashboard" || view === "reports")
 			void client.fetchQuery(reportQuery(filters)).catch(() => {});
-	}, [client, filters, transactionFilters, view]);
+		if (needsPreviousReport)
+			void client.fetchQuery(reportQuery(previousReportFilters)).catch(() => {});
+		if (view === "reports") void client.fetchQuery(savingsHistoryQuery()).catch(() => {});
+	}, [client, filters, needsPreviousReport, previousReportFilters, transactionFilters, view]);
 	const active = [
 		...(needsAccounts ? [accounts] : []),
 		...(needsCategories ? [categories] : []),
 		...(needsTransactions ? [transactions] : []),
 		...(needsReport ? [report] : []),
+		...(needsPreviousReport ? [previousReport] : []),
+		...(needsSavingsHistory ? [savingsHistory] : []),
 	];
 	const loading = active.some((query) => query.isFetching);
 	const initialLoading = active.some((query) => query.isLoading);
@@ -72,7 +95,10 @@ export function useMoneyManagerData(view: View) {
 	// Invalidate every cached filter variant; only visible queries refetch immediately.
 	const refreshTransactions = useCallback(async () => {
 		await Promise.all([
-			client.invalidateQueries({ queryKey: ["description-suggestions"], refetchType: "none" }),
+			client.invalidateQueries({
+				queryKey: ["description-suggestions"],
+				refetchType: "none",
+			}),
 			client.invalidateQueries({ queryKey: ["transactions"] }),
 			client.invalidateQueries({ queryKey: ["accounts"] }),
 			client.invalidateQueries({ queryKey: ["reports"] }),
@@ -93,6 +119,9 @@ export function useMoneyManagerData(view: View) {
 		categories: categories.data ?? [],
 		transactions: transactions.data ?? [],
 		report: report.data ?? [],
+		previousReport: previousReport.data ?? [],
+		reportMonth,
+		savingsHistory: savingsHistory.data ?? { account_count: 0, months: [] },
 		filters,
 		setFilters,
 		error,

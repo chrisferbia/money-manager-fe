@@ -1,11 +1,7 @@
 export type View = "dashboard" | "transactions" | "accounts" | "reports" | "settings";
 export type EntryType = "income" | "expense" | "transfer";
 export type DisplayCurrency = "IDR" | "USD";
-export type TransactionSort =
-	| "occurred-desc"
-	| "occurred-asc"
-	| "created-desc"
-	| "created-asc";
+export type TransactionSort = "occurred-desc" | "occurred-asc" | "created-desc" | "created-asc";
 
 export type Account = {
 	id: number;
@@ -42,6 +38,17 @@ export type ReportItem = {
 	id: number;
 	name: string;
 	total: number;
+};
+
+export type SavingsHistoryPoint = {
+	month: string;
+	balance: number;
+	change: number;
+};
+
+export type SavingsHistoryReport = {
+	account_count: number;
+	months: SavingsHistoryPoint[];
 };
 
 export type EntryForm = {

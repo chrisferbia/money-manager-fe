@@ -1,6 +1,13 @@
 import { QueryClient, queryOptions } from "@tanstack/react-query";
 import { request } from "./client";
-import type { Account, Category, DashboardFilters, ReportItem, Transaction } from "../types";
+import type {
+	Account,
+	Category,
+	DashboardFilters,
+	ReportItem,
+	SavingsHistoryReport,
+	Transaction,
+} from "../types";
 import { sortTransactions } from "../utils/transactions";
 
 export function createQueryClient() {
@@ -62,5 +69,15 @@ export function reportQuery(filters: Pick<DashboardFilters, "from" | "to">) {
 		queryKey: ["reports", params.toString()],
 		queryFn: ({ signal }) =>
 			request<ReportItem[]>(`/reports/expenses-by-category?${params}`, { signal }),
+	});
+}
+
+export function savingsHistoryQuery(months = 12) {
+	return queryOptions({
+		queryKey: ["reports", "savings-balance-history", months],
+		queryFn: ({ signal }) =>
+			request<SavingsHistoryReport>(`/reports/savings-balance-history?months=${months}`, {
+				signal,
+			}),
 	});
 }

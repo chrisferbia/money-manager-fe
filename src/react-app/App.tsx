@@ -30,6 +30,9 @@ function App() {
 		categories,
 		transactions,
 		report,
+		previousReport,
+		reportMonth,
+		savingsHistory,
 		filters,
 		setFilters,
 		error,
@@ -230,6 +233,9 @@ function App() {
 			{view === "reports" && (
 				<ReportsView
 					report={report}
+					previousReport={previousReport}
+					reportMonth={reportMonth}
+					savingsHistory={savingsHistory}
 					money={money}
 					onCategorySelect={openCategoryTransactions}
 				/>

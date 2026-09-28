@@ -28,6 +28,8 @@ beforeEach(() => {
 			return [{ id: 1, name: "Wallet", type: "cash", sequence: 1, balance }];
 		if (path.startsWith("/categories"))
 			return [{ id: 1, name: "Food", type: "expense", sequence: 1 }];
+		if (path.startsWith("/reports/savings-balance-history"))
+			return { account_count: 0, months: [] };
 		if (path.startsWith("/reports")) return [{ id: 1, name: "Food", total: 1000 }];
 		return [];
 	});
