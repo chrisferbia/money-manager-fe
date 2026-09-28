@@ -36,6 +36,11 @@ export function Dashboard({
 	onCategorySelect,
 	onNavigate,
 }: DashboardProps) {
+	const idr = new Intl.NumberFormat("id-ID", {
+		style: "currency",
+		currency: "IDR",
+		maximumFractionDigits: 0,
+	});
 	const largestCategory = Math.max(...report.map((item) => item.total), 1);
 	const periodLabel = formatPeriodLabel(fromDate, toDate);
 	return (
@@ -88,11 +93,17 @@ export function Dashboard({
 										onAccountSelect(account.id);
 									}
 								}}
-								aria-label={`View transactions for ${account.name}`}
+								aria-label={`${account.valuation_mode === "crypto" ? "Manage crypto holdings for" : "View transactions for"} ${account.name}`}
 							>
 								<span>{account.type.replace("_", " ")}</span>
 								<strong>{account.name}</strong>
-								<b>{money(account.balance ?? 0)}</b>
+								<b>
+									{account.balance === null
+										? "Price unavailable"
+										: account.valuation_mode === "crypto"
+											? idr.format(account.balance ?? 0)
+											: money(account.balance ?? 0)}
+								</b>
 							</div>
 						))}
 					</div>

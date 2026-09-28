@@ -50,6 +50,7 @@ function App() {
 	const [addTransactionRequest, setAddTransactionRequest] = useState(0);
 	const nextAddTransactionRequest = useRef(0);
 	const [transactionSort, setTransactionSort] = useState<TransactionSort>("occurred-desc");
+	const [selectedCryptoAccountId, setSelectedCryptoAccountId] = useState<number | null>(null);
 
 	const { accountNames, categoryNames } = useMemo(
 		() => createNameMaps(accounts, categories),
@@ -121,6 +122,11 @@ function App() {
 		setAddTransactionRequest(++nextAddTransactionRequest.current);
 	}
 	function openAccountTransactions(accountId: number) {
+		if (accounts.find((account) => account.id === accountId)?.valuation_mode === "crypto") {
+			openCryptoHoldings(accountId);
+			selectView("accounts");
+			return;
+		}
 		setFilters({
 			account: String(accountId),
 			type: "",
@@ -129,6 +135,14 @@ function App() {
 			to: filters.to,
 		});
 		selectView("transactions");
+	}
+	function openCryptoHoldings(accountId: number) {
+		setSelectedCryptoAccountId(accountId);
+		window.requestAnimationFrame(() =>
+			document
+				.getElementById("crypto-holdings-panel")
+				?.scrollIntoView({ behavior: "smooth" }),
+		);
 	}
 	function openCategoryTransactions(categoryId: number) {
 		setFilters({
@@ -225,6 +239,9 @@ function App() {
 					setEditing={setEditingAccount}
 					saving={actions.accountSaving}
 					deletingId={actions.deletingAccountId}
+					selectedCryptoAccountId={selectedCryptoAccountId}
+					onCryptoAccountSelect={openCryptoHoldings}
+					onHoldingsChange={refreshAccounts}
 					onAccountSelect={openAccountTransactions}
 					onSave={actions.saveAccount}
 					onDelete={actions.deleteAccount}

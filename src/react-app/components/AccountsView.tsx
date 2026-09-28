@@ -7,6 +7,7 @@ import {
 	type SetStateAction,
 } from "react";
 import type { Account, AccountDraft, MoneyFormatter } from "../types";
+import { CryptoHoldingsPanel } from "./CryptoHoldingsPanel";
 import {
 	accountNameMaxLength,
 	accountTypeLabel,
@@ -25,6 +26,9 @@ type AccountsViewProps = {
 	saving: boolean;
 	deletingId: number | null;
 	onAccountSelect: (accountId: number) => void;
+	selectedCryptoAccountId: number | null;
+	onCryptoAccountSelect: (accountId: number) => void;
+	onHoldingsChange: () => Promise<void>;
 	onSave: (event: FormEvent<HTMLFormElement>) => Promise<boolean>;
 	onDelete: (account: Account) => void;
 };
@@ -44,6 +48,9 @@ export function AccountsView({
 	saving,
 	deletingId,
 	onAccountSelect,
+	selectedCryptoAccountId,
+	onCryptoAccountSelect,
+	onHoldingsChange,
 	onSave,
 	onDelete,
 }: AccountsViewProps) {
@@ -53,6 +60,14 @@ export function AccountsView({
 	const addButtonRef = useRef<HTMLButtonElement>(null);
 	const returnFocusRef = useRef<HTMLButtonElement | null>(null);
 	const accountCountLabel = `${accounts.length} ${accounts.length === 1 ? "account" : "accounts"}`;
+	const cryptoAccounts = accounts.filter((account) => account.valuation_mode === "crypto");
+	const activeCryptoAccount =
+		cryptoAccounts.find((account) => account.id === selectedCryptoAccountId) ??
+		cryptoAccounts[0];
+	const selectAccount = (account: Account) =>
+		account.valuation_mode === "crypto"
+			? onCryptoAccountSelect(account.id)
+			: onAccountSelect(account.id);
 	const sortedAccounts = [...accounts].sort(
 		(left, right) => left.sequence - right.sequence || left.id - right.id,
 	);
@@ -64,7 +79,7 @@ export function AccountsView({
 	);
 	const resetForm = () => {
 		setEditing(null);
-		setDraft({ name: "", type: "cash", sequence: "" });
+		setDraft({ name: "", type: "cash", sequence: "", valuationMode: "ledger" });
 		setFormOpen(false);
 	};
 	const closeForm = () => {
@@ -74,7 +89,7 @@ export function AccountsView({
 	const openAddForm = () => {
 		returnFocusRef.current = addButtonRef.current;
 		setEditing(null);
-		setDraft({ name: "", type: "cash", sequence: "" });
+		setDraft({ name: "", type: "cash", sequence: "", valuationMode: "ledger" });
 		setFormOpen(true);
 	};
 	const handleSave = async (event: FormEvent<HTMLFormElement>) => {
@@ -87,6 +102,7 @@ export function AccountsView({
 			name: account.name,
 			type: account.type,
 			sequence: String(account.sequence),
+			valuationMode: account.valuation_mode ?? "ledger",
 		});
 		setFormOpen(true);
 	};
@@ -157,7 +173,14 @@ export function AccountsView({
 							<select
 								value={draft.type}
 								onChange={(event) =>
-									setDraft({ ...draft, type: event.target.value })
+									setDraft({
+										...draft,
+										type: event.target.value,
+										valuationMode:
+											event.target.value === "investment"
+												? draft.valuationMode
+												: "ledger",
+									})
 								}
 							>
 								{accountTypes.map((type) => (
@@ -167,6 +190,23 @@ export function AccountsView({
 								))}
 							</select>
 						</label>
+						{draft.type === "investment" && (
+							<label className="crypto-mode-option">
+								<input
+									type="checkbox"
+									checked={draft.valuationMode === "crypto"}
+									onChange={(event) =>
+										setDraft({
+											...draft,
+											valuationMode: event.target.checked
+												? "crypto"
+												: "ledger",
+										})
+									}
+								/>
+								<span>Track crypto holdings at market value (IDR)</span>
+							</label>
+						)}
 						{editing && (
 							<label>
 								Display order <span className="optional">(lower comes first)</span>
@@ -240,7 +280,17 @@ export function AccountsView({
 											<div className="account-type-group-total">
 												<span>Total balance</span>
 												<strong className={balanceTone(groupBalance)}>
-													{money(groupBalance)}
+													{groupAccounts.some(
+														(account) => account.balance === null,
+													)
+														? "Price unavailable"
+														: type === "investment"
+															? new Intl.NumberFormat("id-ID", {
+																	style: "currency",
+																	currency: "IDR",
+																	maximumFractionDigits: 0,
+																}).format(groupBalance)
+															: money(groupBalance)}
 												</strong>
 											</div>
 										</div>
@@ -251,19 +301,19 @@ export function AccountsView({
 
 												return (
 													<article
-														className={`managed-account-card${isEditing ? " is-editing" : ""}`}
+														className={`managed-account-card${isEditing ? " is-editing" : ""}${activeCryptoAccount?.id === account.id ? " is-active-crypto" : ""}`}
 														key={account.id}
 														role="button"
 														tabIndex={0}
-														aria-label={`View transactions for ${account.name}`}
-														onClick={() => onAccountSelect(account.id)}
+														aria-label={`${account.valuation_mode === "crypto" ? "Manage crypto holdings for" : "View transactions for"} ${account.name}`}
+														onClick={() => selectAccount(account)}
 														onKeyDown={(event) => {
 															if (
 																event.key === "Enter" ||
 																event.key === " "
 															) {
 																event.preventDefault();
-																onAccountSelect(account.id);
+																selectAccount(account);
 															}
 														}}
 													>
@@ -288,7 +338,19 @@ export function AccountsView({
 															<b
 																className={`account-balance ${balanceTone(accountBalance)}`}
 															>
-																{money(accountBalance)}
+																{account.balance === null
+																	? "Price unavailable"
+																	: account.valuation_mode ===
+																		  "crypto"
+																		? new Intl.NumberFormat(
+																				"id-ID",
+																				{
+																					style: "currency",
+																					currency: "IDR",
+																					maximumFractionDigits: 0,
+																				},
+																			).format(accountBalance)
+																		: money(accountBalance)}
 															</b>
 															<div className="account-card-actions">
 																<button
@@ -345,6 +407,13 @@ export function AccountsView({
 					)}
 				</section>
 			</div>
+			{activeCryptoAccount && (
+				<CryptoHoldingsPanel
+					key={activeCryptoAccount.id}
+					account={activeCryptoAccount}
+					onHoldingsChange={onHoldingsChange}
+				/>
+			)}
 		</>
 	);
 }

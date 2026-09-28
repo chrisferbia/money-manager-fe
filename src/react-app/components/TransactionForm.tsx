@@ -65,11 +65,13 @@ export function TransactionForm({
 					onChange={(event) => update({ accountId: event.target.value })}
 				>
 					<option value="">Select account</option>
-					{accounts.map((item) => (
-						<option key={item.id} value={item.id}>
-							{item.name}
-						</option>
-					))}
+					{accounts
+						.filter((item) => item.valuation_mode !== "crypto")
+						.map((item) => (
+							<option key={item.id} value={item.id}>
+								{item.name}
+							</option>
+						))}
 				</select>
 			</label>
 			{entry.type === "transfer" && (
@@ -82,7 +84,11 @@ export function TransactionForm({
 					>
 						<option value="">Select destination</option>
 						{accounts
-							.filter((item) => String(item.id) !== entry.accountId)
+							.filter(
+								(item) =>
+									item.valuation_mode !== "crypto" &&
+									String(item.id) !== entry.accountId,
+							)
 							.map((item) => (
 								<option key={item.id} value={item.id}>
 									{item.name}

@@ -9,7 +9,21 @@ export type Account = {
 	type: string;
 	sequence: number;
 	created_at: string;
-	balance?: number;
+	valuation_mode?: "ledger" | "crypto";
+	balance?: number | null;
+};
+
+export type CryptoCoin = { coin_id: string; name: string; symbol: string };
+
+export type CryptoHolding = CryptoCoin & {
+	id: number;
+	account_id: number;
+	quantity: string;
+	price_idr: string | null;
+	value_idr: number | null;
+	provider_updated_at: string | null;
+	fetched_at: string | null;
+	price_status: "fresh" | "stale" | "unavailable";
 };
 
 export type Category = {
@@ -74,6 +88,7 @@ export type AccountDraft = {
 	name: string;
 	type: string;
 	sequence: string;
+	valuationMode: "ledger" | "crypto";
 };
 
 export type DashboardFilters = {

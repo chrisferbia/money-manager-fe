@@ -18,6 +18,7 @@ export function useAccountActions({
 		name: "",
 		type: "cash",
 		sequence: "",
+		valuationMode: "ledger",
 	});
 	const [editingAccount, setEditingAccount] = useState<Account | null>(null);
 	const [accountSaving, setSaving] = useState(false);
@@ -41,6 +42,10 @@ export function useAccountActions({
 			setError("Choose a valid account type.");
 			return false;
 		}
+		if (draft.valuationMode === "crypto" && draft.type !== "investment") {
+			setError("Crypto tracking requires an Investment account.");
+			return false;
+		}
 		const sequence = Number(draft.sequence);
 		if (editing && (!Number.isInteger(sequence) || sequence < 1)) {
 			setError("Display order must be a positive whole number.");
@@ -49,9 +54,27 @@ export function useAccountActions({
 		setSaving(true);
 		try {
 			const wasEditing = Boolean(editing);
+			const replacingLedger =
+				Boolean(editing) &&
+				editing?.valuation_mode !== "crypto" &&
+				draft.valuationMode === "crypto" &&
+				Boolean(editing?.balance);
+			if (
+				replacingLedger &&
+				!window.confirm(
+					`Switch "${editing?.name}" to crypto value? Its current transaction balance of Rp ${new Intl.NumberFormat("id-ID").format(editing?.balance ?? 0)} will no longer be included. The new balance will come only from holdings.`,
+				)
+			)
+				return false;
 			const payload = editing
-				? { name, type: draft.type, sequence }
-				: { name, type: draft.type };
+				? {
+						name,
+						type: draft.type,
+						sequence,
+						valuation_mode: draft.valuationMode,
+						confirm_ledger_replacement: replacingLedger,
+					}
+				: { name, type: draft.type, valuation_mode: draft.valuationMode };
 			if (editing)
 				await request<Account>(`/accounts/${editing.id}`, {
 					method: "PATCH",
@@ -62,7 +85,7 @@ export function useAccountActions({
 					method: "POST",
 					body: JSON.stringify(payload),
 				});
-			setAccountDraft({ name: "", type: "cash", sequence: "" });
+			setAccountDraft({ name: "", type: "cash", sequence: "", valuationMode: "ledger" });
 			setEditingAccount(null);
 			setError("");
 			setNotice(wasEditing ? "Account updated." : "Account added.");

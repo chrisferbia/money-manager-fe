@@ -39,7 +39,12 @@ function setup(kind: "account" | "category") {
 		created_at: "2026-01-01",
 	};
 	act(() => {
-		result.current.setAccountDraft({ name: "Unsaved account", type: "cash", sequence: "2" });
+		result.current.setAccountDraft({
+			name: "Unsaved account",
+			type: "cash",
+			sequence: "2",
+			valuationMode: "ledger",
+		});
 		result.current.setCategoryDraft({
 			name: "Unsaved category",
 			type: "expense",
@@ -71,7 +76,13 @@ function setup(kind: "account" | "category") {
 			kind === "account"
 				? result.current.saveAccount(
 						event,
-						{ name: "  Wallet  ", type: "cash", sequence: "2", ...changes },
+						{
+							name: "  Wallet  ",
+							type: "cash",
+							sequence: "2",
+							valuationMode: "ledger",
+							...changes,
+						},
 						editing ? account : null,
 					)
 				: result.current.saveCategory(
@@ -107,7 +118,13 @@ for (const kind of ["account", "category"] as const) {
 				});
 				const payload =
 					kind === "account"
-						? { name: "Wallet", type: "cash", ...(editing ? { sequence: 2 } : {}) }
+						? {
+								name: "Wallet",
+								type: "cash",
+								...(editing ? { sequence: 2 } : {}),
+								valuation_mode: "ledger",
+								...(editing ? { confirm_ledger_replacement: false } : {}),
+							}
 						: editing
 							? { name: "Food", sequence: 2, monthly_budget: null }
 							: { name: "Food", type: "expense", monthly_budget: null };
@@ -123,7 +140,7 @@ for (const kind of ["account", "category"] as const) {
 					name: "",
 					type: kind === "account" ? "cash" : "expense",
 					sequence: "",
-					...(kind === "category" ? { monthlyBudget: "" } : {}),
+					...(kind === "category" ? { monthlyBudget: "" } : { valuationMode: "ledger" }),
 				});
 				expect(context.editing()).toBeNull();
 				expect(context.dependencies.setNotice).toHaveBeenCalledWith(
@@ -208,6 +225,37 @@ for (const kind of ["account", "category"] as const) {
 		});
 	});
 }
+
+it("asks before replacing an existing investment ledger balance with crypto valuation", async () => {
+	const { result, event } = setup("account");
+	const existing = {
+		id: 8,
+		name: "Investment",
+		type: "investment",
+		sequence: 1,
+		created_at: "2026-01-01",
+		balance: 10_000_000,
+		valuation_mode: "ledger" as const,
+	};
+	vi.mocked(window.confirm).mockReturnValueOnce(false).mockReturnValueOnce(true);
+	const draft = {
+		name: "Investment",
+		type: "investment",
+		sequence: "1",
+		valuationMode: "crypto" as const,
+	};
+	await act(async () => {
+		expect(await result.current.saveAccount(event, draft, existing)).toBe(false);
+	});
+	expect(mockRequest).not.toHaveBeenCalled();
+	await act(async () => {
+		expect(await result.current.saveAccount(event, draft, existing)).toBe(true);
+	});
+	expect(JSON.parse(mockRequest.mock.calls[0][1]!.body as string)).toMatchObject({
+		valuation_mode: "crypto",
+		confirm_ledger_replacement: true,
+	});
+});
 
 it("saves and validates an expense category monthly budget", async () => {
 	const context = setup("category");
