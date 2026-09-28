@@ -1,14 +1,25 @@
-import type { MoneyFormatter, ReportItem, SavingsHistoryReport } from "../types";
+import { useState } from "react";
+import type { Category, MoneyFormatter, ReportItem, SavingsHistoryReport } from "../types";
 import { shiftMonth } from "../utils/period";
 import { SavingsTrendChart } from "./SavingsTrendChart";
+
+type ComparisonMode = "lastMonth" | "budget";
 
 type ReportsViewProps = {
 	report: ReportItem[];
 	previousReport: ReportItem[];
 	reportMonth: string;
+	categories: Category[];
 	savingsHistory: SavingsHistoryReport;
 	money: MoneyFormatter;
 	onCategorySelect: (categoryId: number) => void;
+};
+
+type CategoryComparison = {
+	id: number;
+	name: string;
+	current: number;
+	reference: number | null;
 };
 
 function monthLabel(month: string) {
@@ -22,27 +33,63 @@ export function ReportsView({
 	report,
 	previousReport,
 	reportMonth,
+	categories,
 	savingsHistory,
 	money,
 	onCategorySelect,
 }: ReportsViewProps) {
+	const [comparisonMode, setComparisonMode] = useState<ComparisonMode>("lastMonth");
 	const previousById = new Map(previousReport.map((item) => [item.id, item]));
+	const categoryById = new Map(categories.map((item) => [item.id, item]));
 	const currentIds = new Set(report.map((item) => item.id));
-	const comparison = [
-		...report.map((item) => ({
-			id: item.id,
-			name: item.name,
-			current: item.total,
-			previous: previousById.get(item.id)?.total ?? 0,
-		})),
-		...previousReport
-			.filter((item) => !currentIds.has(item.id))
-			.map((item) => ({ id: item.id, name: item.name, current: 0, previous: item.total })),
-	];
-	const largest = Math.max(...comparison.flatMap((item) => [item.current, item.previous]), 1);
+	const comparison: CategoryComparison[] =
+		comparisonMode === "lastMonth"
+			? [
+					...report.map((item) => ({
+						id: item.id,
+						name: item.name,
+						current: item.total,
+						reference: previousById.get(item.id)?.total ?? 0,
+					})),
+					...previousReport
+						.filter((item) => !currentIds.has(item.id))
+						.map((item) => ({
+							id: item.id,
+							name: item.name,
+							current: 0,
+							reference: item.total,
+						})),
+				]
+			: [
+					...report.map((item) => ({
+						id: item.id,
+						name: item.name,
+						current: item.total,
+						reference: categoryById.get(item.id)?.monthly_budget ?? null,
+					})),
+					...categories
+						.filter(
+							(item) =>
+								item.type === "expense" &&
+								item.monthly_budget != null &&
+								!currentIds.has(item.id),
+						)
+						.map((item) => ({
+							id: item.id,
+							name: item.name,
+							current: 0,
+							reference: item.monthly_budget ?? null,
+						})),
+				];
+	const largest = Math.max(
+		...comparison.flatMap((item) => [item.current, item.reference ?? 0]),
+		1,
+	);
 	const currentLabel = reportMonth ? monthLabel(reportMonth) : "Selected period";
 	const previousLabel = reportMonth ? monthLabel(shiftMonth(reportMonth, -1)) : "Previous month";
+	const referenceLabel = comparisonMode === "lastMonth" ? previousLabel : "Monthly budget";
 	const hasMonthComparison = Boolean(reportMonth);
+
 	return (
 		<>
 			<section className="page-heading">
@@ -63,28 +110,66 @@ export function ReportsView({
 									<i className="report-legend-current" /> {currentLabel}
 								</span>
 								<span>
-									<i className="report-legend-previous" /> {previousLabel}
+									<i className="report-legend-previous" /> {referenceLabel}
 								</span>
 							</div>
 						) : (
 							<p className="muted report-comparison-note">
-								Choose Monthly to compare with the previous month.
+								Choose Monthly to compare with last month or a budget.
 							</p>
 						)}
+					</div>
+					<div className="report-compare-control">
+						<span>Compare with</span>
+						<div role="group" aria-label="Compare expenses with">
+							<button
+								type="button"
+								className={comparisonMode === "lastMonth" ? "selected" : ""}
+								aria-pressed={comparisonMode === "lastMonth"}
+								onClick={() => setComparisonMode("lastMonth")}
+							>
+								Last month
+							</button>
+							<button
+								type="button"
+								className={comparisonMode === "budget" ? "selected" : ""}
+								aria-pressed={comparisonMode === "budget"}
+								onClick={() => setComparisonMode("budget")}
+							>
+								Budget
+							</button>
+						</div>
 					</div>
 				</div>
 				{comparison.length ? (
 					<div className="report-list">
 						{comparison.map((item) => {
-							const difference = item.current - item.previous;
+							const difference =
+								item.reference === null ? null : item.current - item.reference;
 							const direction =
-								difference > 0 ? "increase" : difference < 0 ? "decrease" : "flat";
+								difference === null
+									? "no-budget"
+									: difference > 0
+										? "increase"
+										: difference < 0
+											? "decrease"
+											: "flat";
 							const differenceLabel =
-								difference > 0
-									? `Increased by ${money(difference)}`
-									: difference < 0
-										? `Decreased by ${money(Math.abs(difference))}`
-										: "No change";
+								comparisonMode === "budget"
+									? difference === null
+										? "No budget set"
+										: difference > 0
+											? `Over budget by ${money(difference)}`
+											: difference < 0
+												? `${money(Math.abs(difference))} remaining`
+												: "Budget reached"
+									: difference! > 0
+										? `Increased by ${money(difference!)}`
+										: difference! < 0
+											? `Decreased by ${money(Math.abs(difference!))}`
+											: "No change";
+							const referenceAmount =
+								item.reference === null ? "No budget" : money(item.reference);
 							return (
 								<div
 									className="report-row report-comparison-row"
@@ -106,7 +191,7 @@ export function ReportsView({
 										id={`report-category-${item.id}-comparison`}
 									>
 										{hasMonthComparison
-											? `${currentLabel} ${money(item.current)}, ${previousLabel} ${money(item.previous)}. ${differenceLabel}.`
+											? `${currentLabel} ${money(item.current)}, ${referenceLabel} ${referenceAmount}. ${differenceLabel}.`
 											: `${currentLabel} ${money(item.current)}.`}
 									</span>
 									<div className="report-category-comparison">
@@ -120,12 +205,12 @@ export function ReportsView({
 													}}
 												/>
 											</div>
-											{hasMonthComparison && (
+											{hasMonthComparison && item.reference !== null && (
 												<div className="progress-track report-previous-track">
 													<div
 														className="progress-fill report-previous-fill"
 														style={{
-															width: `${(item.previous / largest) * 100}%`,
+															width: `${(item.reference / largest) * 100}%`,
 														}}
 													/>
 												</div>
@@ -136,14 +221,24 @@ export function ReportsView({
 										<b>{money(item.current)}</b>
 										{hasMonthComparison && (
 											<>
-												<span>{money(item.previous)} last month</span>
+												<span>
+													{comparisonMode === "budget"
+														? item.reference === null
+															? "No budget set"
+															: `${money(item.reference)} budget`
+														: `${money(item.reference ?? 0)} last month`}
+												</span>
 												<small className={direction}>
-													{difference > 0
+													{direction === "increase"
 														? "↑"
-														: difference < 0
+														: direction === "decrease"
 															? "↓"
-															: "—"}{" "}
-													{differenceLabel}
+															: direction === "flat"
+																? "—"
+																: ""}{" "}
+													{direction === "no-budget"
+														? "Set in Settings"
+														: differenceLabel}
 												</small>
 											</>
 										)}

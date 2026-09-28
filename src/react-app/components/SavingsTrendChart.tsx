@@ -51,12 +51,12 @@ export function SavingsTrendChart({ report, money }: SavingsTrendChartProps) {
 	const y = (value: number) => chartPadding.top + ((max - value) / (max - min)) * plotHeight;
 	const coordinates = points.map((point, index) => `${x(index)},${y(point.balance)}`).join(" ");
 	const areaPath = points.length
-		? `M ${x(0)} ${chartPadding.top + plotHeight} L ${coordinates.replaceAll(",", " ")} L ${x(points.length - 1)} ${chartPadding.top + plotHeight} Z`
+		? `M ${x(0)} ${chartPadding.top + plotHeight} L ${coordinates.replace(/,/g, " ")} L ${x(points.length - 1)} ${chartPadding.top + plotHeight} Z`
 		: "";
-	const currentBalance = points.at(-1)?.balance ?? 0;
+	const currentBalance = points[points.length - 1]?.balance ?? 0;
 	const periodChange = currentBalance - (points[0]?.balance ?? 0);
 	const firstMonth = points[0]?.month;
-	const lastMonth = points.at(-1)?.month;
+	const lastMonth = points[points.length - 1]?.month;
 	const activeIndex = hoveredIndex ?? selectedIndex;
 	const lastIndex = points.length - 1;
 	const lastPointX = x(lastIndex);

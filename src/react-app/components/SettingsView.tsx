@@ -6,7 +6,7 @@ import {
 	type FormEvent,
 	type SetStateAction,
 } from "react";
-import type { Category, CategoryDraft, DisplayCurrency } from "../types";
+import type { Category, CategoryDraft, DisplayCurrency, MoneyFormatter } from "../types";
 import { categoryNameMaxLength } from "../utils/constants";
 
 type SettingsViewProps = {
@@ -21,6 +21,7 @@ type SettingsViewProps = {
 	onDeleteCategory: (category: Category) => void;
 	currency: DisplayCurrency;
 	onCurrencyChange: (value: DisplayCurrency) => void;
+	money: MoneyFormatter;
 };
 
 export function SettingsView({
@@ -35,6 +36,7 @@ export function SettingsView({
 	onDeleteCategory,
 	currency,
 	onCurrencyChange,
+	money,
 }: SettingsViewProps) {
 	const [formOpen, setFormOpen] = useState(false);
 	const [expandedGroups, setExpandedGroups] = useState({ expense: false, income: false });
@@ -52,7 +54,7 @@ export function SettingsView({
 	const visibleIncome = expandedGroups.income ? income : income.slice(0, 4);
 	const resetForm = () => {
 		setEditing(null);
-		setDraft({ name: "", type: "expense", sequence: "" });
+		setDraft({ name: "", type: "expense", sequence: "", monthlyBudget: "" });
 		setFormOpen(false);
 	};
 	const closeForm = () => {
@@ -62,7 +64,7 @@ export function SettingsView({
 	const openAddForm = () => {
 		returnFocusRef.current = addButtonRef.current;
 		setEditing(null);
-		setDraft({ name: "", type: "expense", sequence: "" });
+		setDraft({ name: "", type: "expense", sequence: "", monthlyBudget: "" });
 		setFormOpen(true);
 	};
 	const handleSave = async (event: FormEvent<HTMLFormElement>) => {
@@ -75,6 +77,7 @@ export function SettingsView({
 			name: category.name,
 			type: category.type,
 			sequence: String(category.sequence),
+			monthlyBudget: category.monthly_budget ? String(category.monthly_budget) : "",
 		});
 		setFormOpen(true);
 		setExpandedGroups((current) => ({ ...current, [category.type]: true }));
@@ -235,6 +238,28 @@ export function SettingsView({
 									/>
 								</label>
 							)}
+							{draft.type === "expense" && (
+								<label>
+									Monthly budget <span className="optional">(optional)</span>
+									<input
+										type="number"
+										min="1"
+										step="1"
+										inputMode="numeric"
+										placeholder="2000000"
+										value={draft.monthlyBudget}
+										onChange={(event) =>
+											setDraft({
+												...draft,
+												monthlyBudget: event.target.value,
+											})
+										}
+									/>
+									<small className="field-help">
+										Used by the monthly expense comparison in Reports.
+									</small>
+								</label>
+							)}
 							<button
 								className="submit-button"
 								disabled={saving || deletingId !== null}
@@ -267,6 +292,7 @@ export function SettingsView({
 							onDelete={onDeleteCategory}
 							editing={editing}
 							deletingId={deletingId}
+							money={money}
 						/>
 						<CategoryGroup
 							title="Income categories"
@@ -279,6 +305,7 @@ export function SettingsView({
 							onDelete={onDeleteCategory}
 							editing={editing}
 							deletingId={deletingId}
+							money={money}
 						/>
 					</div>
 				</section>
@@ -298,6 +325,7 @@ function CategoryGroup({
 	onDelete,
 	editing,
 	deletingId,
+	money,
 }: {
 	title: string;
 	type: Category["type"];
@@ -309,6 +337,7 @@ function CategoryGroup({
 	onDelete: (category: Category) => void;
 	editing: Category | null;
 	deletingId: number | null;
+	money: MoneyFormatter;
 }) {
 	return (
 		<div className="category-group">
@@ -374,6 +403,13 @@ function CategoryGroup({
 								<strong className="category-card-name" title={category.name}>
 									{category.name}
 								</strong>
+								{category.type === "expense" && (
+									<span className="category-card-budget">
+										{category.monthly_budget
+											? `${money(category.monthly_budget)} monthly budget`
+											: "No monthly budget"}
+									</span>
+								)}
 							</article>
 						);
 					})}

@@ -18,6 +18,7 @@ export function useCategoryActions({
 		name: "",
 		type: "expense",
 		sequence: "",
+		monthlyBudget: "",
 	});
 	const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 	const [categorySaving, setSaving] = useState(false);
@@ -42,20 +43,37 @@ export function useCategoryActions({
 			setError("Display order must be a positive whole number.");
 			return false;
 		}
+		const monthlyBudget = draft.monthlyBudget.trim() ? Number(draft.monthlyBudget) : null;
+		if (
+			draft.type === "expense" &&
+			monthlyBudget !== null &&
+			(!Number.isInteger(monthlyBudget) || monthlyBudget < 1)
+		) {
+			setError("Monthly budget must be a positive whole number.");
+			return false;
+		}
 		setSaving(true);
 		try {
 			const wasEditing = Boolean(editing);
 			if (editing)
 				await request<Category>(`/categories/${editing.id}`, {
 					method: "PATCH",
-					body: JSON.stringify({ name, sequence }),
+					body: JSON.stringify({
+						name,
+						sequence,
+						monthly_budget: editing.type === "expense" ? monthlyBudget : null,
+					}),
 				});
 			else
 				await request<Category>("/categories", {
 					method: "POST",
-					body: JSON.stringify({ name, type: draft.type }),
+					body: JSON.stringify({
+						name,
+						type: draft.type,
+						monthly_budget: draft.type === "expense" ? monthlyBudget : null,
+					}),
 				});
-			setCategoryDraft({ name: "", type: "expense", sequence: "" });
+			setCategoryDraft({ name: "", type: "expense", sequence: "", monthlyBudget: "" });
 			setEditingCategory(null);
 			setError("");
 			setNotice(wasEditing ? "Category updated." : "Category added.");

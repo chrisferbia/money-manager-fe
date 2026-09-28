@@ -235,6 +235,7 @@ function App() {
 					report={report}
 					previousReport={previousReport}
 					reportMonth={reportMonth}
+					categories={categories}
 					savingsHistory={savingsHistory}
 					money={money}
 					onCategorySelect={openCategoryTransactions}
@@ -253,6 +254,7 @@ function App() {
 					onDeleteCategory={actions.deleteCategory}
 					currency={currency}
 					onCurrencyChange={changeCurrency}
+					money={money}
 				/>
 			)}
 		</AppShell>

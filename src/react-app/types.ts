@@ -17,6 +17,7 @@ export type Category = {
 	name: string;
 	type: "income" | "expense";
 	sequence: number;
+	monthly_budget?: number | null;
 	created_at: string;
 };
 
@@ -66,6 +67,7 @@ export type CategoryDraft = {
 	name: string;
 	type: "income" | "expense";
 	sequence: string;
+	monthlyBudget: string;
 };
 
 export type AccountDraft = {

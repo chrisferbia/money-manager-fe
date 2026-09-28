@@ -23,7 +23,11 @@ export function useMoneyManagerData(view: View) {
 	const [actionError, setActionError] = useState("");
 	const [dismissedFetchError, setDismissedFetchError] = useState<Error | undefined>(undefined);
 	const needsAccounts = view === "dashboard" || view === "transactions" || view === "accounts";
-	const needsCategories = view === "dashboard" || view === "transactions" || view === "settings";
+	const needsCategories =
+		view === "dashboard" ||
+		view === "transactions" ||
+		view === "reports" ||
+		view === "settings";
 	const needsTransactions = view === "dashboard" || view === "transactions";
 	const needsReport = view === "dashboard" || view === "reports";
 	const needsSavingsHistory = view === "reports";
@@ -58,7 +62,12 @@ export function useMoneyManagerData(view: View) {
 	useEffect(() => {
 		if (view === "dashboard" || view === "transactions" || view === "accounts")
 			void client.fetchQuery(accountQuery()).catch(() => {});
-		if (view === "dashboard" || view === "transactions" || view === "settings")
+		if (
+			view === "dashboard" ||
+			view === "transactions" ||
+			view === "reports" ||
+			view === "settings"
+		)
 			void client.fetchQuery(categoryQuery()).catch(() => {});
 		if (view === "dashboard" || view === "transactions")
 			void client.fetchQuery(transactionQuery(transactionFilters)).catch(() => {});
