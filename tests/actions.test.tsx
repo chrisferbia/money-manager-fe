@@ -35,6 +35,7 @@ function setup(kind: "account" | "category") {
 		name: "Food",
 		type: "expense" as const,
 		sequence: 1,
+		monthly_budget: null,
 		created_at: "2026-01-01",
 	};
 	act(() => {
@@ -43,6 +44,7 @@ function setup(kind: "account" | "category") {
 			name: "Unsaved category",
 			type: "expense",
 			sequence: "2",
+			monthlyBudget: "",
 		});
 		result.current.setEditingAccount(account);
 		result.current.setEditingCategory(category);
@@ -62,7 +64,10 @@ function setup(kind: "account" | "category") {
 			kind === "account" ? result.current.editingAccount : result.current.editingCategory,
 		saving: () =>
 			kind === "account" ? result.current.accountSaving : result.current.categorySaving,
-		save: (editing = false, changes: { name?: string; sequence?: string } = {}) =>
+		save: (
+			editing = false,
+			changes: { name?: string; sequence?: string; monthlyBudget?: string } = {},
+		) =>
 			kind === "account"
 				? result.current.saveAccount(
 						event,
@@ -71,7 +76,13 @@ function setup(kind: "account" | "category") {
 					)
 				: result.current.saveCategory(
 						event,
-						{ name: "  Food  ", type: "expense", sequence: "2", ...changes },
+						{
+							name: "  Food  ",
+							type: "expense",
+							sequence: "2",
+							monthlyBudget: "",
+							...changes,
+						},
 						editing ? category : null,
 					),
 		remove: () =>
@@ -97,7 +108,9 @@ for (const kind of ["account", "category"] as const) {
 				const payload =
 					kind === "account"
 						? { name: "Wallet", type: "cash", ...(editing ? { sequence: 2 } : {}) }
-						: { name: "Food", ...(editing ? { sequence: 2 } : { type: "expense" }) };
+						: editing
+							? { name: "Food", sequence: 2, monthly_budget: null }
+							: { name: "Food", type: "expense", monthly_budget: null };
 				expect(mockRequest).toHaveBeenCalledWith(context.path + (editing ? "/7" : ""), {
 					method: editing ? "PATCH" : "POST",
 					body: JSON.stringify(payload),
@@ -110,6 +123,7 @@ for (const kind of ["account", "category"] as const) {
 					name: "",
 					type: kind === "account" ? "cash" : "expense",
 					sequence: "",
+					...(kind === "category" ? { monthlyBudget: "" } : {}),
 				});
 				expect(context.editing()).toBeNull();
 				expect(context.dependencies.setNotice).toHaveBeenCalledWith(
@@ -194,6 +208,19 @@ for (const kind of ["account", "category"] as const) {
 		});
 	});
 }
+
+it("saves and validates an expense category monthly budget", async () => {
+	const context = setup("category");
+	await act(async () => {
+		expect(await context.save(true, { monthlyBudget: "0" })).toBe(false);
+	});
+	expect(mockRequest).not.toHaveBeenCalled();
+
+	await act(async () => {
+		expect(await context.save(true, { monthlyBudget: "2500000" })).toBe(true);
+	});
+	expect(JSON.parse(mockRequest.mock.calls[0][1]!.body as string).monthly_budget).toBe(2_500_000);
+});
 
 it("owns form drafts and keeps saving states independent during concurrent saves", async () => {
 	const { result, event } = setup("account");
