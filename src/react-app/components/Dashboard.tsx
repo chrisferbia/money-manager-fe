@@ -4,6 +4,7 @@ import { periodLabel as formatPeriodLabel } from "../utils/period";
 import { TransactionRows } from "./TransactionRows";
 
 type DashboardProps = {
+	readOnly?: boolean;
 	onMonthSelect: (month: string) => void;
 	fromDate: string;
 	toDate: string;
@@ -21,6 +22,7 @@ type DashboardProps = {
 };
 
 export function Dashboard({
+	readOnly = false,
 	onMonthSelect,
 	fromDate,
 	toDate,
@@ -76,7 +78,7 @@ export function Dashboard({
 							<h3>Current balances</h3>
 						</div>
 						<button className="text-button" onClick={() => onNavigate("accounts")}>
-							Manage
+							{readOnly ? "View accounts" : "Manage"}
 						</button>
 					</div>
 					<div className="account-cards">
@@ -169,6 +171,7 @@ export function Dashboard({
 					</button>
 				</div>
 				<TransactionRows
+					readOnly={readOnly}
 					transactions={transactions.slice(0, 5)}
 					emptyTitle={`No transactions in ${periodLabel}`}
 					accountNames={accountNames}

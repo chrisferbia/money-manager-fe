@@ -10,6 +10,7 @@ const navigation: Array<{ id: View; label: string }> = [
 ];
 
 type AppShellProps = {
+	demoMode?: boolean;
 	view: View;
 	error: string;
 	notice: string;
@@ -23,6 +24,7 @@ type AppShellProps = {
 };
 
 export function AppShell({
+	demoMode = false,
 	view,
 	error,
 	notice,
@@ -42,33 +44,46 @@ export function AppShell({
 					<p className="eyebrow">PERSONAL FINANCE</p>
 					<h1>Money manager</h1>
 				</div>
-				<span className="local-badge">Connected to API</span>
+				<span className="local-badge">
+					{demoMode ? "Demo data · Read only" : "Connected to API"}
+				</span>
 				{accountControl}
-				<button className="topbar-add-button" type="button" onClick={onAddTransaction}>
-					+ Add transaction
-				</button>
+				{!demoMode && (
+					<button className="topbar-add-button" type="button" onClick={onAddTransaction}>
+						+ Add transaction
+					</button>
+				)}
 			</header>
 			<nav className="main-nav" aria-label="Main navigation">
-				{navigation.map((item) => (
-					<button
-						key={item.id}
-						className={view === item.id ? "selected" : ""}
-						onClick={() => onViewChange(item.id)}
-					>
-						{item.label}
-					</button>
-				))}
+				{navigation
+					.filter((item) => !demoMode || item.id !== "settings")
+					.map((item) => (
+						<button
+							key={item.id}
+							className={view === item.id ? "selected" : ""}
+							onClick={() => onViewChange(item.id)}
+						>
+							{item.label}
+						</button>
+					))}
 			</nav>
-			<button
-				className="floating-add-button"
-				type="button"
-				onClick={onAddTransaction}
-				aria-label="Add transaction"
-			>
-				<span aria-hidden="true">+</span>
-				Add transaction
-			</button>
+			{!demoMode && (
+				<button
+					className="floating-add-button"
+					type="button"
+					onClick={onAddTransaction}
+					aria-label="Add transaction"
+				>
+					<span aria-hidden="true">+</span>
+					Add transaction
+				</button>
+			)}
 			<main aria-busy={loading}>
+				{demoMode && (
+					<div className="demo-banner" role="status">
+						You are viewing fictional demo data. Sign in to manage your own money.
+					</div>
+				)}
 				{error && (
 					<div className="api-error" role="alert">
 						<strong>Action failed</strong>

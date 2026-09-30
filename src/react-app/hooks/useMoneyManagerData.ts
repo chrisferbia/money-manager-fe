@@ -14,11 +14,11 @@ import { currentMonth, monthRange, selectedMonth, shiftMonth } from "../utils/pe
 
 const emptyFilters: DashboardFilters = { account: "", type: "", category: "", from: "", to: "" };
 
-export function useMoneyManagerData(view: View) {
+export function useMoneyManagerData(view: View, initialMonth?: string) {
 	const client = useQueryClient();
 	const [filters, setFilters] = useState<DashboardFilters>(() => ({
 		...emptyFilters,
-		...monthRange(currentMonth()),
+		...(initialMonth ? monthRange(initialMonth) : monthRange(currentMonth())),
 	}));
 	const [actionError, setActionError] = useState("");
 	const [dismissedFetchError, setDismissedFetchError] = useState<Error | undefined>(undefined);

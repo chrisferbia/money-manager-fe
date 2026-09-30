@@ -2311,15 +2311,20 @@ footer {
 		font-size: 10px;
 	}
 	.stats {
-		grid-template-columns: repeat(3, minmax(0, 1fr));
+		grid-template-columns: minmax(0, 1fr);
 		gap: 6px;
 	}
 	.stat-card {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 8px;
 		padding: 11px 8px;
 		border-radius: 10px;
 	}
 	.stat-card strong {
-		font-size: clamp(12px, 4vw, 17px);
+		margin: 0;
+		font-size: 18px;
 	}
 	.stat-card .stat-label {
 		font-size: 10px;
@@ -2788,4 +2793,27 @@ footer {
 .auth-intro p:last-child {
 	color: #65736b;
 	line-height: 1.5;
+}
+.demo-entry-button,
+.demo-signin-button {
+	padding: 10px 16px;
+	border: 1px solid #203b31;
+	border-radius: 9px;
+	background: #203b31;
+	color: #fff;
+	font-size: 13px;
+	font-weight: 700;
+}
+.demo-entry-button {
+	background: transparent;
+	color: #203b31;
+}
+.demo-banner {
+	margin-bottom: 18px;
+	padding: 12px 16px;
+	border: 1px solid #d9ddd7;
+	border-radius: 10px;
+	background: #eaf0e9;
+	color: #203b31;
+	font-size: 13px;
 }

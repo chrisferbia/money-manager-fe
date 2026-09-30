@@ -2,7 +2,7 @@ import { ClerkProvider, SignIn, UserButton, useAuth } from "@clerk/react";
 import type { QueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import App from "../App";
-import { request, setAccessTokenProvider } from "../api/client";
+import { request, setAccessTokenProvider, setDemoMode } from "../api/client";
 
 type RuntimeConfig = { clerkPublishableKey?: unknown; detail?: string };
 
@@ -10,6 +10,28 @@ function WorkspaceApp({ queryClient }: { queryClient: QueryClient }) {
 	const { isLoaded, isSignedIn, userId, getToken } = useAuth();
 	const [readyUser, setReadyUser] = useState<string | null>(null);
 	const [error, setError] = useState("");
+	const [showDemo, setShowDemo] = useState(
+		() => new URLSearchParams(window.location.search).get("demo") === "1",
+	);
+	const [demoMonth, setDemoMonth] = useState<string | null>(null);
+	const [demoError, setDemoError] = useState("");
+
+	useEffect(() => {
+		if (!isLoaded || isSignedIn || !showDemo) return;
+		let cancelled = false;
+		setDemoMode(true);
+		request<{ latest_transaction_at: string | null }>("/metadata")
+			.then((result) => {
+				if (!cancelled) setDemoMonth(result.latest_transaction_at?.slice(0, 7) || "");
+			})
+			.catch((cause: unknown) => {
+				if (!cancelled)
+					setDemoError(cause instanceof Error ? cause.message : "Could not load demo.");
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [isLoaded, isSignedIn, showDemo]);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -18,6 +40,7 @@ function WorkspaceApp({ queryClient }: { queryClient: QueryClient }) {
 			setAccessTokenProvider(null);
 			return;
 		}
+		setDemoMode(false);
 		setAccessTokenProvider(() => getToken());
 		request<{ workspace_id: number }>("/me/bootstrap", { method: "POST" })
 			.then(() => {
@@ -36,6 +59,37 @@ function WorkspaceApp({ queryClient }: { queryClient: QueryClient }) {
 
 	if (!isLoaded) return <div className="auth-screen">Checking your session…</div>;
 	if (!isSignedIn) {
+		if (showDemo) {
+			if (demoError)
+				return (
+					<div className="auth-screen" role="alert">
+						{demoError}
+					</div>
+				);
+			if (demoMonth === null) return <div className="auth-screen">Opening demo…</div>;
+			return (
+				<App
+					demoMode
+					demoMonth={demoMonth}
+					accountControl={
+						<button
+							type="button"
+							className="demo-signin-button"
+							onClick={() => {
+								setDemoMode(false);
+								queryClient.clear();
+								setShowDemo(false);
+								const url = new URL(window.location.href);
+								url.searchParams.delete("demo");
+								window.history.replaceState(null, "", url);
+							}}
+						>
+							Sign in
+						</button>
+					}
+				/>
+			);
+		}
 		return (
 			<div className="auth-screen">
 				<div className="auth-intro">
@@ -44,6 +98,19 @@ function WorkspaceApp({ queryClient }: { queryClient: QueryClient }) {
 					<p>Sign in to see your own accounts, transactions, and savings.</p>
 				</div>
 				<SignIn />
+				<button
+					type="button"
+					className="demo-entry-button"
+					onClick={() => {
+						setDemoMode(true);
+						setShowDemo(true);
+						const url = new URL(window.location.href);
+						url.searchParams.set("demo", "1");
+						window.history.replaceState(null, "", url);
+					}}
+				>
+					Explore demo without signing in
+				</button>
 			</div>
 		);
 	}

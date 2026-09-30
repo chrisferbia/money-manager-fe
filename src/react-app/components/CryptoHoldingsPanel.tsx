@@ -18,11 +18,12 @@ function priceLabel(holding: CryptoHolding) {
 }
 
 type Props = {
+	readOnly?: boolean;
 	account: Account;
 	onHoldingsChange: () => Promise<void>;
 };
 
-export function CryptoHoldingsPanel({ account, onHoldingsChange }: Props) {
+export function CryptoHoldingsPanel({ account, onHoldingsChange, readOnly = false }: Props) {
 	const client = useQueryClient();
 	const holdings = useQuery({
 		queryKey: ["crypto-holdings", account.id],
@@ -182,7 +183,7 @@ export function CryptoHoldingsPanel({ account, onHoldingsChange }: Props) {
 									? "Market price unavailable"
 									: `${holding.price_status === "stale" ? "Stale price, fetched" : "Price fetched"} ${holding.fetched_at ? new Date(holding.fetched_at).toLocaleString("id-ID") : ""}`}
 							</p>
-							{editingId === holding.id ? (
+							{!readOnly && editingId === holding.id ? (
 								<form
 									className="crypto-inline-form"
 									onSubmit={(event) => updateHolding(event, holding)}
@@ -214,7 +215,7 @@ export function CryptoHoldingsPanel({ account, onHoldingsChange }: Props) {
 										Cancel
 									</button>
 								</form>
-							) : (
+							) : !readOnly ? (
 								<div className="crypto-holding-actions">
 									<button
 										type="button"
@@ -235,72 +236,78 @@ export function CryptoHoldingsPanel({ account, onHoldingsChange }: Props) {
 										Remove
 									</button>
 								</div>
-							)}
+							) : null}
 						</article>
 					))}
 				</div>
 			) : (
-				<p className="empty-copy">No crypto added yet. Search for a coin below to start.</p>
+				<p className="empty-copy">
+					{readOnly
+						? "No crypto holdings in this demo account."
+						: "No crypto added yet. Search for a coin below to start."}
+				</p>
 			)}
-			<div className="crypto-add-area">
-				<h4>Add a holding</h4>
-				<form className="crypto-search-form" onSubmit={runSearch}>
-					<label>
-						Search cryptocurrency
-						<input
-							value={search}
-							onChange={(event) => {
-								setSearch(event.target.value);
-								setSelected(null);
-								setResults([]);
-							}}
-							placeholder="Bitcoin or BTC"
-							minLength={2}
-							required
-						/>
-					</label>
-					<button type="submit" className="cancel-button" disabled={searching}>
-						{searching ? "Searching..." : "Search"}
-					</button>
-				</form>
-				{results.length > 0 && (
-					<div className="crypto-search-results" aria-label="Coin search results">
-						{results.map((coin) => (
-							<button
-								key={coin.coin_id}
-								type="button"
-								aria-pressed={selected?.coin_id === coin.coin_id}
-								onClick={() => setSelected(coin)}
-							>
-								{coin.name} <span>{coin.symbol}</span>
-							</button>
-						))}
-					</div>
-				)}
-				{selected && (
-					<form className="crypto-add-form" onSubmit={addHolding}>
-						<p>
-							Adding{" "}
-							<strong>
-								{selected.name} ({selected.symbol})
-							</strong>
-						</p>
+			{!readOnly && (
+				<div className="crypto-add-area">
+					<h4>Add a holding</h4>
+					<form className="crypto-search-form" onSubmit={runSearch}>
 						<label>
-							Quantity owned
+							Search cryptocurrency
 							<input
-								value={quantity}
-								onChange={(event) => setQuantity(event.target.value)}
-								placeholder="0.025"
-								inputMode="decimal"
+								value={search}
+								onChange={(event) => {
+									setSearch(event.target.value);
+									setSelected(null);
+									setResults([]);
+								}}
+								placeholder="Bitcoin or BTC"
+								minLength={2}
 								required
 							/>
 						</label>
-						<button className="submit-button" type="submit" disabled={saving}>
-							{saving ? "Adding..." : "Add holding"}
+						<button type="submit" className="cancel-button" disabled={searching}>
+							{searching ? "Searching..." : "Search"}
 						</button>
 					</form>
-				)}
-			</div>
+					{results.length > 0 && (
+						<div className="crypto-search-results" aria-label="Coin search results">
+							{results.map((coin) => (
+								<button
+									key={coin.coin_id}
+									type="button"
+									aria-pressed={selected?.coin_id === coin.coin_id}
+									onClick={() => setSelected(coin)}
+								>
+									{coin.name} <span>{coin.symbol}</span>
+								</button>
+							))}
+						</div>
+					)}
+					{selected && (
+						<form className="crypto-add-form" onSubmit={addHolding}>
+							<p>
+								Adding{" "}
+								<strong>
+									{selected.name} ({selected.symbol})
+								</strong>
+							</p>
+							<label>
+								Quantity owned
+								<input
+									value={quantity}
+									onChange={(event) => setQuantity(event.target.value)}
+									placeholder="0.025"
+									inputMode="decimal"
+									required
+								/>
+							</label>
+							<button className="submit-button" type="submit" disabled={saving}>
+								{saving ? "Adding..." : "Add holding"}
+							</button>
+						</form>
+					)}
+				</div>
+			)}
 			<p className="crypto-footnote">
 				Adding holdings does not deduct money from another account. Keep those balances
 				updated separately to avoid overstating your overall total.

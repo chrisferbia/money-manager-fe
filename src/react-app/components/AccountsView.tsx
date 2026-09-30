@@ -16,6 +16,7 @@ import {
 } from "../utils/constants";
 
 type AccountsViewProps = {
+	readOnly?: boolean;
 	accounts: Account[];
 	loading: boolean;
 	money: MoneyFormatter;
@@ -38,6 +39,7 @@ function balanceTone(amount: number) {
 }
 
 export function AccountsView({
+	readOnly = false,
 	accounts,
 	loading,
 	money,
@@ -117,129 +119,139 @@ export function AccountsView({
 
 	return (
 		<>
-			<section className="account-toolbar">
-				<button
-					ref={addButtonRef}
-					className="primary-button"
-					type="button"
-					onClick={openAddForm}
-					aria-expanded={formOpen}
-					aria-controls="account-form"
+			{!readOnly && (
+				<section className="account-toolbar">
+					<button
+						ref={addButtonRef}
+						className="primary-button"
+						type="button"
+						onClick={openAddForm}
+						aria-expanded={formOpen}
+						aria-controls="account-form"
+					>
+						+ Add account
+					</button>
+				</section>
+			)}
+			{!readOnly && (
+				<dialog
+					ref={dialogRef}
+					className="account-dialog"
+					aria-labelledby="account-dialog-title"
+					onCancel={(event) => {
+						event.preventDefault();
+						closeForm();
+					}}
+					onClick={(event) => {
+						if (event.target === event.currentTarget) closeForm();
+					}}
 				>
-					+ Add account
-				</button>
-			</section>
-			<dialog
-				ref={dialogRef}
-				className="account-dialog"
-				aria-labelledby="account-dialog-title"
-				onCancel={(event) => {
-					event.preventDefault();
-					closeForm();
-				}}
-				onClick={(event) => {
-					if (event.target === event.currentTarget) closeForm();
-				}}
-			>
-				<section className="account-dialog-content" id="account-form">
-					<div className="panel-heading">
-						<div>
-							<p className="eyebrow">{editing ? "EDIT ACCOUNT" : "NEW ACCOUNT"}</p>
-							<h3 id="account-dialog-title">
-								{editing ? "Update account" : "Add account"}
-							</h3>
+					<section className="account-dialog-content" id="account-form">
+						<div className="panel-heading">
+							<div>
+								<p className="eyebrow">
+									{editing ? "EDIT ACCOUNT" : "NEW ACCOUNT"}
+								</p>
+								<h3 id="account-dialog-title">
+									{editing ? "Update account" : "Add account"}
+								</h3>
+							</div>
+							<button className="dialog-close" type="button" onClick={closeForm}>
+								Close
+							</button>
 						</div>
-						<button className="dialog-close" type="button" onClick={closeForm}>
-							Close
-						</button>
-					</div>
-					<form onSubmit={handleSave}>
-						<label>
-							Name
-							<input
-								ref={nameInputRef}
-								value={draft.name}
-								onChange={(event) =>
-									setDraft({ ...draft, name: event.target.value })
-								}
-								placeholder="Everyday checking"
-								required
-								maxLength={accountNameMaxLength}
-								autoComplete="off"
-							/>
-						</label>
-						<label>
-							Type
-							<select
-								value={draft.type}
-								onChange={(event) =>
-									setDraft({
-										...draft,
-										type: event.target.value,
-										valuationMode:
-											event.target.value === "investment"
-												? draft.valuationMode
-												: "ledger",
-									})
-								}
-							>
-								{accountTypes.map((type) => (
-									<option key={type} value={type}>
-										{accountTypeLabel(type)}
-									</option>
-								))}
-							</select>
-						</label>
-						{draft.type === "investment" && (
-							<label className="crypto-mode-option">
+						<form onSubmit={handleSave}>
+							<label>
+								Name
 								<input
-									type="checkbox"
-									checked={draft.valuationMode === "crypto"}
+									ref={nameInputRef}
+									value={draft.name}
+									onChange={(event) =>
+										setDraft({ ...draft, name: event.target.value })
+									}
+									placeholder="Everyday checking"
+									required
+									maxLength={accountNameMaxLength}
+									autoComplete="off"
+								/>
+							</label>
+							<label>
+								Type
+								<select
+									value={draft.type}
 									onChange={(event) =>
 										setDraft({
 											...draft,
-											valuationMode: event.target.checked
-												? "crypto"
-												: "ledger",
+											type: event.target.value,
+											valuationMode:
+												event.target.value === "investment"
+													? draft.valuationMode
+													: "ledger",
 										})
 									}
-								/>
-								<span>Track crypto holdings at market value (IDR)</span>
+								>
+									{accountTypes.map((type) => (
+										<option key={type} value={type}>
+											{accountTypeLabel(type)}
+										</option>
+									))}
+								</select>
 							</label>
-						)}
-						{editing && (
-							<label>
-								Display order <span className="optional">(lower comes first)</span>
-								<input
-									type="number"
-									min="1"
-									max={accounts.length}
-									step="1"
-									required
-									value={draft.sequence}
-									onChange={(event) =>
-										setDraft({ ...draft, sequence: event.target.value })
-									}
-									inputMode="numeric"
-								/>
-							</label>
-						)}
-						<button className="submit-button" disabled={saving || deletingId !== null}>
-							{saving ? "Saving..." : editing ? "Save account" : "Add account"}
-						</button>
-						{editing && (
+							{draft.type === "investment" && (
+								<label className="crypto-mode-option">
+									<input
+										type="checkbox"
+										checked={draft.valuationMode === "crypto"}
+										onChange={(event) =>
+											setDraft({
+												...draft,
+												valuationMode: event.target.checked
+													? "crypto"
+													: "ledger",
+											})
+										}
+									/>
+									<span>Track crypto holdings at market value (IDR)</span>
+								</label>
+							)}
+							{editing && (
+								<label>
+									Display order{" "}
+									<span className="optional">(lower comes first)</span>
+									<input
+										type="number"
+										min="1"
+										max={accounts.length}
+										step="1"
+										required
+										value={draft.sequence}
+										onChange={(event) =>
+											setDraft({ ...draft, sequence: event.target.value })
+										}
+										inputMode="numeric"
+									/>
+								</label>
+							)}
 							<button
-								className="cancel-button"
-								type="button"
-								disabled={saving}
-								onClick={closeForm}
+								className="submit-button"
+								disabled={saving || deletingId !== null}
 							>
-								Cancel
+								{saving ? "Saving..." : editing ? "Save account" : "Add account"}
 							</button>
-						)}
-					</form>
-				</section>
-			</dialog>
+							{editing && (
+								<button
+									className="cancel-button"
+									type="button"
+									disabled={saving}
+									onClick={closeForm}
+								>
+									Cancel
+								</button>
+							)}
+						</form>
+					</section>
+				</dialog>
+			)}
 			<div className="two-column accounts-layout">
 				<section className="panel account-list-panel">
 					<div className="panel-heading">
@@ -352,49 +364,51 @@ export function AccountsView({
 																			).format(accountBalance)
 																		: money(accountBalance)}
 															</b>
-															<div className="account-card-actions">
-																<button
-																	type="button"
-																	className="edit-button"
-																	disabled={
-																		saving ||
-																		deletingId !== null
-																	}
-																	aria-label={`Edit ${account.name}`}
-																	onClick={(event) => {
-																		event.stopPropagation();
-																		startEdit(
-																			account,
-																			event.currentTarget,
-																		);
-																	}}
-																>
-																	Edit
-																</button>
-																<button
-																	type="button"
-																	className="delete-button"
-																	disabled={
-																		saving ||
-																		deletingId !== null ||
-																		isEditing
-																	}
-																	aria-label={`Delete ${account.name}`}
-																	title={
-																		isEditing
-																			? "Cancel editing before deleting"
-																			: undefined
-																	}
-																	onClick={(event) => {
-																		event.stopPropagation();
-																		onDelete(account);
-																	}}
-																>
-																	{deletingId === account.id
-																		? "Deleting..."
-																		: "Delete"}
-																</button>
-															</div>
+															{!readOnly && (
+																<div className="account-card-actions">
+																	<button
+																		type="button"
+																		className="edit-button"
+																		disabled={
+																			saving ||
+																			deletingId !== null
+																		}
+																		aria-label={`Edit ${account.name}`}
+																		onClick={(event) => {
+																			event.stopPropagation();
+																			startEdit(
+																				account,
+																				event.currentTarget,
+																			);
+																		}}
+																	>
+																		Edit
+																	</button>
+																	<button
+																		type="button"
+																		className="delete-button"
+																		disabled={
+																			saving ||
+																			deletingId !== null ||
+																			isEditing
+																		}
+																		aria-label={`Delete ${account.name}`}
+																		title={
+																			isEditing
+																				? "Cancel editing before deleting"
+																				: undefined
+																		}
+																		onClick={(event) => {
+																			event.stopPropagation();
+																			onDelete(account);
+																		}}
+																	>
+																		{deletingId === account.id
+																			? "Deleting..."
+																			: "Delete"}
+																	</button>
+																</div>
+															)}
 														</div>
 													</article>
 												);
@@ -409,6 +423,7 @@ export function AccountsView({
 			</div>
 			{activeCryptoAccount && (
 				<CryptoHoldingsPanel
+					readOnly={readOnly}
 					key={activeCryptoAccount.id}
 					account={activeCryptoAccount}
 					onHoldingsChange={onHoldingsChange}

@@ -1,6 +1,7 @@
 import type { MoneyFormatter, Transaction } from "../types";
 
 type TransactionRowContext = {
+	readOnly?: boolean;
 	accountNames: Map<number, string>;
 	categoryNames: Map<number, string>;
 	money: MoneyFormatter;
@@ -24,6 +25,7 @@ function formatTransactionDate(value: string) {
 }
 
 export function TransactionRows({
+	readOnly = false,
 	transactions,
 	subtotalTransactions,
 	accountNames,
@@ -82,6 +84,7 @@ export function TransactionRows({
 					<div className="transaction-date-list">
 						{group.map((transaction) => (
 							<TransactionRow
+								readOnly={readOnly}
 								key={transaction.id}
 								transaction={transaction}
 								accountNames={accountNames}
@@ -98,6 +101,7 @@ export function TransactionRows({
 }
 
 function TransactionRow({
+	readOnly = false,
 	transaction,
 	accountNames,
 	categoryNames,
@@ -130,16 +134,24 @@ function TransactionRow({
 	return (
 		<div
 			className={`transaction-row ${transaction.type}`}
-			role="button"
-			tabIndex={0}
-			onClick={(event) => onEdit(transaction, event.currentTarget)}
-			onKeyDown={(event) => {
-				if (event.key === "Enter" || event.key === " ") {
-					event.preventDefault();
-					onEdit(transaction, event.currentTarget);
-				}
-			}}
-			aria-label={`Open ${typeLabel.toLowerCase()} transaction for ${categoryLabel}`}
+			role={readOnly ? undefined : "button"}
+			tabIndex={readOnly ? undefined : 0}
+			onClick={readOnly ? undefined : (event) => onEdit(transaction, event.currentTarget)}
+			onKeyDown={
+				readOnly
+					? undefined
+					: (event) => {
+							if (event.key === "Enter" || event.key === " ") {
+								event.preventDefault();
+								onEdit(transaction, event.currentTarget);
+							}
+						}
+			}
+			aria-label={
+				readOnly
+					? undefined
+					: `Open ${typeLabel.toLowerCase()} transaction for ${categoryLabel}`
+			}
 		>
 			<span className="transaction-value transaction-category" title={categoryLabel}>
 				{categoryLabel}

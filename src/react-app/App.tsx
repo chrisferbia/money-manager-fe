@@ -24,8 +24,15 @@ function readViewFromHash(): View {
 	return viewIds.includes(candidate) ? candidate : "dashboard";
 }
 
-function App({ accountControl }: { accountControl?: ReactNode } = {}) {
-	const [view, setView] = useState<View>(readViewFromHash);
+function App({
+	accountControl,
+	demoMode = false,
+	demoMonth,
+}: { accountControl?: ReactNode; demoMode?: boolean; demoMonth?: string } = {}) {
+	const [view, setView] = useState<View>(() => {
+		const initial = readViewFromHash();
+		return demoMode && initial === "settings" ? "dashboard" : initial;
+	});
 	const {
 		accounts,
 		categories,
@@ -43,7 +50,7 @@ function App({ accountControl }: { accountControl?: ReactNode } = {}) {
 		refreshTransactions,
 		refreshCategories,
 		refreshAccounts,
-	} = useMoneyManagerData(view);
+	} = useMoneyManagerData(view, demoMode ? demoMonth : undefined);
 	const [currency, setCurrency] = useState<DisplayCurrency>(() =>
 		typeof window === "undefined" ? "IDR" : readCurrency(),
 	);
@@ -93,7 +100,8 @@ function App({ accountControl }: { accountControl?: ReactNode } = {}) {
 
 	useEffect(() => {
 		const handleLocationChange = () => {
-			setView(readViewFromHash());
+			const next = readViewFromHash();
+			setView(demoMode && next === "settings" ? "dashboard" : next);
 			setError("");
 			setNotice("");
 		};
@@ -103,9 +111,10 @@ function App({ accountControl }: { accountControl?: ReactNode } = {}) {
 			window.removeEventListener("hashchange", handleLocationChange);
 			window.removeEventListener("popstate", handleLocationChange);
 		};
-	}, [setError, setNotice]);
+	}, [demoMode, setError, setNotice]);
 
 	function selectView(next: View) {
+		if (demoMode && next === "settings") return;
 		setView(next);
 		if (typeof window !== "undefined" && window.location.hash !== `#${next}`)
 			window.location.hash = next;
@@ -117,6 +126,7 @@ function App({ accountControl }: { accountControl?: ReactNode } = {}) {
 		persistCurrency(next);
 	}
 	function openTransactionComposer() {
+		if (demoMode) return;
 		setError("");
 		setNotice("");
 		selectView("transactions");
@@ -158,6 +168,7 @@ function App({ accountControl }: { accountControl?: ReactNode } = {}) {
 
 	return (
 		<AppShell
+			demoMode={demoMode}
 			view={view}
 			error={error}
 			notice={notice}
@@ -177,6 +188,7 @@ function App({ accountControl }: { accountControl?: ReactNode } = {}) {
 			)}
 			{view === "dashboard" && (
 				<Dashboard
+					readOnly={demoMode}
 					onMonthSelect={(month) =>
 						setFilters((current) => ({ ...current, ...monthRange(month) }))
 					}
@@ -206,6 +218,7 @@ function App({ accountControl }: { accountControl?: ReactNode } = {}) {
 			)}
 			{view === "transactions" && (
 				<TransactionsView
+					readOnly={demoMode}
 					accounts={accounts}
 					categories={categories}
 					filters={filters}
@@ -232,6 +245,7 @@ function App({ accountControl }: { accountControl?: ReactNode } = {}) {
 			)}
 			{view === "accounts" && (
 				<AccountsView
+					readOnly={demoMode}
 					accounts={accounts}
 					loading={loading}
 					money={money}
@@ -260,7 +274,7 @@ function App({ accountControl }: { accountControl?: ReactNode } = {}) {
 					onCategorySelect={openCategoryTransactions}
 				/>
 			)}
-			{view === "settings" && (
+			{view === "settings" && !demoMode && (
 				<SettingsView
 					categories={categories}
 					draft={categoryDraft}

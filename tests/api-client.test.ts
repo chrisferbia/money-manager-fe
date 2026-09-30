@@ -62,3 +62,20 @@ it("requires a session and sends its bearer token with API requests", async () =
 	const [, options] = fetchMock.mock.calls[1] as [string, RequestInit];
 	expect(new Headers(options.headers).get("Authorization")).toBe("Bearer signed-session");
 });
+
+it("sends anonymous demo reads only to the allowlisted demo API", async () => {
+	const fetchMock = vi
+		.fn()
+		.mockResolvedValueOnce(Response.json({ apiBaseUrl: "https://api.example.test" }))
+		.mockResolvedValueOnce(Response.json([]));
+	vi.stubGlobal("fetch", fetchMock);
+	const { request, setDemoMode } = await import("../src/react-app/api/client");
+	setDemoMode(true);
+	await request("/accounts?include_balance=true");
+	const [url, options] = fetchMock.mock.calls[1] as [string, RequestInit];
+	expect(url).toBe("https://api.example.test/demo/accounts?include_balance=true");
+	expect(new Headers(options.headers).has("Authorization")).toBe(false);
+	await expect(request("/accounts", { method: "POST" })).rejects.toThrow("read-only");
+	await expect(request("/me")).rejects.toThrow("not available");
+	expect(fetchMock).toHaveBeenCalledTimes(2);
+});

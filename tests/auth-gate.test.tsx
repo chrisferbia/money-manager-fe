@@ -1,9 +1,9 @@
 import { QueryClient } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import type { PropsWithChildren } from "react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { PropsWithChildren, ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { AuthGate } from "../src/react-app/components/AuthGate";
-import { request, setAccessTokenProvider } from "../src/react-app/api/client";
+import { request, setAccessTokenProvider, setDemoMode } from "../src/react-app/api/client";
 
 const auth = vi.hoisted(() => ({ signedIn: false, userId: null as string | null }));
 const getToken = vi.hoisted(() => async () => "session-token");
@@ -20,11 +20,17 @@ vi.mock("@clerk/react", () => ({
 	}),
 }));
 vi.mock("../src/react-app/App", () => ({
-	default: () => <div>Private dashboard</div>,
+	default: ({ demoMode, accountControl }: { demoMode?: boolean; accountControl?: ReactNode }) => (
+		<div>
+			{demoMode ? "Demo dashboard" : "Private dashboard"}
+			{accountControl}
+		</div>
+	),
 }));
 vi.mock("../src/react-app/api/client", () => ({
 	request: vi.fn(),
 	setAccessTokenProvider: vi.fn(),
+	setDemoMode: vi.fn(),
 }));
 
 beforeEach(() => {
@@ -33,6 +39,8 @@ beforeEach(() => {
 	auth.userId = null;
 	vi.mocked(request).mockReset().mockResolvedValue({ workspace_id: 2 });
 	vi.mocked(setAccessTokenProvider).mockClear();
+	vi.mocked(setDemoMode).mockClear();
+	window.history.replaceState(null, "", "/");
 });
 
 afterEach(() => {
@@ -54,4 +62,17 @@ it("bootstraps the signed-in workspace before opening the dashboard", async () =
 	await waitFor(() => expect(request).toHaveBeenCalledWith("/me/bootstrap", { method: "POST" }));
 	expect(await screen.findByText("Private dashboard")).toBeTruthy();
 	expect(setAccessTokenProvider).toHaveBeenCalledWith(expect.any(Function));
+});
+
+it("opens the public demo without a session and can return to sign-in", async () => {
+	vi.mocked(request).mockResolvedValueOnce({ latest_transaction_at: "2026-09-08T00:00:00Z" });
+	render(<AuthGate queryClient={new QueryClient()} />);
+	fireEvent.click(screen.getByRole("button", { name: "Explore demo without signing in" }));
+	expect(await screen.findByText("Demo dashboard")).toBeTruthy();
+	expect(request).toHaveBeenCalledWith("/metadata");
+	expect(setDemoMode).toHaveBeenCalledWith(true);
+	expect(window.location.search).toBe("?demo=1");
+	fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+	expect(screen.getByText("Sign-in form")).toBeTruthy();
+	expect(window.location.search).toBe("");
 });

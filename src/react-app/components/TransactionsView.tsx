@@ -16,6 +16,7 @@ import { TransactionRows } from "./TransactionRows";
 import type { Dispatch, SetStateAction } from "react";
 
 type TransactionsViewProps = {
+	readOnly?: boolean;
 	accounts: Account[];
 	categories: Category[];
 	filters: DashboardFilters;
@@ -48,6 +49,7 @@ function titleCase(value: string) {
 }
 
 export function TransactionsView({
+	readOnly = false,
 	accounts,
 	categories,
 	filters,
@@ -225,46 +227,48 @@ export function TransactionsView({
 
 	return (
 		<>
-			<dialog
-				ref={dialogRef}
-				className="transaction-dialog"
-				aria-labelledby="transaction-dialog-title"
-				onCancel={(event) => {
-					event.preventDefault();
-					closeForm();
-				}}
-				onClick={(event) => {
-					if (event.target === event.currentTarget) closeForm();
-				}}
-			>
-				<section className="transaction-dialog-content" id="transaction-form">
-					<div className="panel-heading">
-						<div>
-							<p className="eyebrow">{editing ? "EDIT ENTRY" : "NEW ENTRY"}</p>
-							<h3 id="transaction-dialog-title">
-								{editing ? "Edit transaction" : "Add transaction"}
-							</h3>
+			{!readOnly && (
+				<dialog
+					ref={dialogRef}
+					className="transaction-dialog"
+					aria-labelledby="transaction-dialog-title"
+					onCancel={(event) => {
+						event.preventDefault();
+						closeForm();
+					}}
+					onClick={(event) => {
+						if (event.target === event.currentTarget) closeForm();
+					}}
+				>
+					<section className="transaction-dialog-content" id="transaction-form">
+						<div className="panel-heading">
+							<div>
+								<p className="eyebrow">{editing ? "EDIT ENTRY" : "NEW ENTRY"}</p>
+								<h3 id="transaction-dialog-title">
+									{editing ? "Edit transaction" : "Add transaction"}
+								</h3>
+							</div>
+							<button className="dialog-close" type="button" onClick={closeForm}>
+								Close
+							</button>
 						</div>
-						<button className="dialog-close" type="button" onClick={closeForm}>
-							Close
-						</button>
-					</div>
-					<TransactionForm
-						formOpen={formOpen}
-						accounts={accounts}
-						entry={entry}
-						setEntry={setEntry}
-						editing={editing}
-						saving={saving}
-						expenseCategories={expenseCategories}
-						incomeCategories={incomeCategories}
-						onSave={handleSave}
-						onCancel={closeForm}
-						onDelete={handleDelete}
-						deleting={deleting}
-					/>
-				</section>
-			</dialog>
+						<TransactionForm
+							formOpen={formOpen}
+							accounts={accounts}
+							entry={entry}
+							setEntry={setEntry}
+							editing={editing}
+							saving={saving}
+							expenseCategories={expenseCategories}
+							incomeCategories={incomeCategories}
+							onSave={handleSave}
+							onCancel={closeForm}
+							onDelete={handleDelete}
+							deleting={deleting}
+						/>
+					</section>
+				</dialog>
+			)}
 			<section className="panel transactions-panel transaction-history-panel">
 				<div className="panel-heading transaction-history-heading">
 					<div>
@@ -369,6 +373,7 @@ export function TransactionsView({
 					</div>
 				}
 				<TransactionRows
+					readOnly={readOnly}
 					transactions={visibleTransactions}
 					subtotalTransactions={searchedTransactions}
 					groupByCreatedAt={sort.startsWith("created")}
@@ -387,7 +392,7 @@ export function TransactionsView({
 							: "Add an income, expense, or transfer to see activity here."
 					}
 				/>
-				{searchedTransactions.length === 0 && (
+				{searchedTransactions.length === 0 && !readOnly && (
 					<button
 						type="button"
 						className="expand-button"
