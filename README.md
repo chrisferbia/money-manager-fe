@@ -19,6 +19,7 @@ Features
 - Create, edit, and remove transactions
 - Categorize transactions and track spending by category
 - Responsive design for desktop and mobile
+- Sign in with Clerk to access a personal workspace
 
 Getting started
 
@@ -120,17 +121,23 @@ These commands validate the code and create a local production build. They do no
 Environment
 The deployed frontend reads its backend URL from `/runtime-config.json`. The Worker creates that response from its `BACKEND_URL` runtime variable, so the same build can be deployed to multiple Workers.
 
+The same endpoint also supplies the public Clerk publishable key. Set `CLERK_PUBLISHABLE_KEY` as a frontend Worker runtime variable. For the existing Clerk instance, register `https://money-manager-fe.azamines.workers.dev` as the production frontend origin in Clerk, and `http://localhost:5173` for local development. The backend must use the corresponding Clerk issuer/public verification key and authorized origins. Do not put a Clerk secret key in the frontend or repository. Rotate any secret that was previously pasted into chat.
+
 For each Worker, go to **Settings > Variables and Secrets > Runtime variables and secrets** and add:
 
 ```text
 Name:  BACKEND_URL
 Type: Text / Variable
 Value: https://your-backend.example.com
+
+Name:  CLERK_PUBLISHABLE_KEY
+Type: Text / Variable
+Value: your Clerk publishable key (starts with pk_)
 ```
 
 Use the backend origin or path prefix that should be followed by `/accounts`, `/categories`, and the other API paths. Do not include credentials, query parameters, or a fragment. `BACKEND_URL` is not a secret: it is intentionally returned to the browser. Do not put API keys or passwords in it.
 
-For local Worker development, create `.dev.vars` using `.dev.vars.example` as a reference. Alternatively, set `VITE_API_URL` locally; it is used only by `npm run dev` and is not used by production builds.
+For local Worker development, create `.dev.vars` using `.dev.vars.example` as a reference. For `npm run dev`, set `VITE_API_URL` and `VITE_CLERK_PUBLISHABLE_KEY` locally; these are development-only and not used by production builds. The frontend calls `POST /me/bootstrap` after sign-in before rendering private data.
 
 Deployment
 Build and deploy the Worker with:

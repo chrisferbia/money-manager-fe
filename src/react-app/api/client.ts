@@ -4,6 +4,11 @@ type RuntimeConfig = {
 };
 
 let apiBasePromise: Promise<string> | undefined;
+let accessTokenProvider: (() => Promise<string | null>) | null = null;
+
+export function setAccessTokenProvider(provider: (() => Promise<string | null>) | null) {
+	accessTokenProvider = provider;
+}
 
 function normalizeApiBase(value: unknown): string {
 	if (typeof value !== "string" || !value.trim()) {
@@ -61,9 +66,13 @@ function getApiBase(): Promise<string> {
 }
 
 export async function request<T>(path: string, options?: RequestInit): Promise<T> {
+	if (!accessTokenProvider) throw new Error("Sign-in required.");
+	const token = await accessTokenProvider();
+	if (!token) throw new Error("Sign-in required.");
 	const apiBase = await getApiBase();
 	const headers = new Headers(options?.headers);
 	if (!headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+	headers.set("Authorization", `Bearer ${token}`);
 
 	const response = await fetch(`${apiBase}${path}`, {
 		...options,

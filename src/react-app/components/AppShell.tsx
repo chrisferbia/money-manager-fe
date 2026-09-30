@@ -18,6 +18,7 @@ type AppShellProps = {
 	onAddTransaction: () => void;
 	onViewChange: (view: View) => void;
 	onDismissError: () => void;
+	accountControl?: ReactNode;
 	children: ReactNode;
 };
 
@@ -30,6 +31,7 @@ export function AppShell({
 	onAddTransaction,
 	onViewChange,
 	onDismissError,
+	accountControl,
 	children,
 }: AppShellProps) {
 	return (
@@ -41,6 +43,7 @@ export function AppShell({
 					<h1>Money manager</h1>
 				</div>
 				<span className="local-badge">Connected to API</span>
+				{accountControl}
 				<button className="topbar-add-button" type="button" onClick={onAddTransaction}>
 					+ Add transaction
 				</button>

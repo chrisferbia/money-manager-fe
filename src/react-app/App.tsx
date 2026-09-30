@@ -1,5 +1,6 @@
 import { monthRange } from "./utils/period";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import "./App.css";
 import { PeriodSelector } from "./components/PeriodSelector";
 import { useMoneyManagerData } from "./hooks/useMoneyManagerData";
@@ -23,7 +24,7 @@ function readViewFromHash(): View {
 	return viewIds.includes(candidate) ? candidate : "dashboard";
 }
 
-function App() {
+function App({ accountControl }: { accountControl?: ReactNode } = {}) {
 	const [view, setView] = useState<View>(readViewFromHash);
 	const {
 		accounts,
@@ -162,6 +163,7 @@ function App() {
 			notice={notice}
 			loading={loading}
 			initialLoading={initialLoading}
+			accountControl={accountControl}
 			onAddTransaction={openTransactionComposer}
 			onViewChange={selectView}
 			onDismissError={() => setError("")}

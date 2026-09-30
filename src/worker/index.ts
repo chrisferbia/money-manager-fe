@@ -2,6 +2,7 @@ import { Hono } from "hono";
 
 type Bindings = {
 	BACKEND_URL?: string;
+	CLERK_PUBLISHABLE_KEY?: string;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -31,7 +32,10 @@ app.get("/runtime-config.json", (c) => {
 			);
 		}
 
-		return c.json({ apiBaseUrl: url.toString().replace(/\/+$/, "") });
+		return c.json({
+			apiBaseUrl: url.toString().replace(/\/+$/, ""),
+			clerkPublishableKey: c.env.CLERK_PUBLISHABLE_KEY?.trim() || null,
+		});
 	} catch {
 		return c.json({ detail: "BACKEND_URL must be an absolute HTTP(S) URL" }, 400);
 	}
