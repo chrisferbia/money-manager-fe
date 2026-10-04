@@ -8,6 +8,7 @@ import {
 } from "react";
 import type { Category, CategoryDraft, DisplayCurrency, MoneyFormatter } from "../types";
 import { categoryNameMaxLength } from "../utils/constants";
+import { EmailFormatTester } from "./EmailFormatTester";
 
 type SettingsViewProps = {
 	categories: Category[];
@@ -134,6 +135,7 @@ export function SettingsView({
 					</span>
 				</div>
 			</section>
+			<EmailFormatTester />
 			<section className="settings-section">
 				<div className="section-heading settings-heading category-section-heading">
 					<div>

@@ -4,7 +4,6 @@ import type { View } from "../types";
 const navigation: Array<{ id: View; label: string }> = [
 	{ id: "dashboard", label: "Overview" },
 	{ id: "transactions", label: "Transactions" },
-	{ id: "imports", label: "Import inbox" },
 	{ id: "accounts", label: "Accounts" },
 	{ id: "reports", label: "Reports" },
 	{ id: "settings", label: "Settings" },
@@ -57,9 +56,7 @@ export function AppShell({
 			</header>
 			<nav className="main-nav" aria-label="Main navigation">
 				{navigation
-					.filter(
-						(item) => !demoMode || (item.id !== "settings" && item.id !== "imports"),
-					)
+					.filter((item) => !demoMode || item.id !== "settings")
 					.map((item) => (
 						<button
 							key={item.id}

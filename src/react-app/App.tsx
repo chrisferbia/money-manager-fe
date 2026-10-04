@@ -11,21 +11,22 @@ import { Dashboard } from "./components/Dashboard";
 import { ReportsView } from "./components/ReportsView";
 import { SettingsView } from "./components/SettingsView";
 import { TransactionsView } from "./components/TransactionsView";
-import { ImportInbox } from "./components/ImportInbox";
 import { createMoneyFormatter, persistCurrency, readCurrency } from "./utils/currency";
 
 import { createNameMaps } from "./utils/maps";
 import type { DisplayCurrency, TransactionSort, View } from "./types";
 
-const viewIds: View[] = ["dashboard", "transactions", "imports", "accounts", "reports", "settings"];
+const viewIds: View[] = ["dashboard", "transactions", "accounts", "reports", "settings"];
 
 function isPrivateView(view: View) {
-	return view === "settings" || view === "imports";
+	return view === "settings";
 }
 
 function readViewFromHash(): View {
 	if (typeof window === "undefined") return "dashboard";
 	const candidate = window.location.hash.slice(1) as View;
+	// Preserve old bookmarks without restoring the transaction-writing inbox.
+	if (window.location.hash === "#imports") return "settings";
 	return viewIds.includes(candidate) ? candidate : "dashboard";
 }
 
@@ -246,15 +247,6 @@ function App({
 					onEdit={actions.editTransaction}
 					onDelete={actions.deleteTransaction}
 					onCancel={actions.resetEntry}
-				/>
-			)}
-			{view === "imports" && !demoMode && (
-				<ImportInbox
-					accounts={accounts}
-					categories={categories}
-					money={money}
-					onImported={refreshTransactions}
-					onAccounts={() => selectView("accounts")}
 				/>
 			)}
 			{view === "accounts" && (
