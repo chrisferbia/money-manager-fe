@@ -22,10 +22,15 @@ export function useMoneyManagerData(view: View, initialMonth?: string) {
 	}));
 	const [actionError, setActionError] = useState("");
 	const [dismissedFetchError, setDismissedFetchError] = useState<Error | undefined>(undefined);
-	const needsAccounts = view === "dashboard" || view === "transactions" || view === "accounts";
+	const needsAccounts =
+		view === "dashboard" ||
+		view === "transactions" ||
+		view === "accounts" ||
+		view === "imports";
 	const needsCategories =
 		view === "dashboard" ||
 		view === "transactions" ||
+		view === "imports" ||
 		view === "reports" ||
 		view === "settings";
 	const needsTransactions = view === "dashboard" || view === "transactions";
@@ -60,11 +65,17 @@ export function useMoneyManagerData(view: View, initialMonth?: string) {
 	// This shared hook stays mounted across pages. Recheck freshness on navigation;
 	// fetchQuery reuses fresh cache entries and deduplicates in-flight requests.
 	useEffect(() => {
-		if (view === "dashboard" || view === "transactions" || view === "accounts")
+		if (
+			view === "dashboard" ||
+			view === "transactions" ||
+			view === "accounts" ||
+			view === "imports"
+		)
 			void client.fetchQuery(accountQuery()).catch(() => {});
 		if (
 			view === "dashboard" ||
 			view === "transactions" ||
+			view === "imports" ||
 			view === "reports" ||
 			view === "settings"
 		)

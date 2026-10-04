@@ -1,4 +1,4 @@
-export type View = "dashboard" | "transactions" | "accounts" | "reports" | "settings";
+export type View = "dashboard" | "transactions" | "imports" | "accounts" | "reports" | "settings";
 export type EntryType = "income" | "expense" | "transfer";
 export type DisplayCurrency = "IDR" | "USD";
 export type TransactionSort = "occurred-desc" | "occurred-asc" | "created-desc" | "created-asc";
@@ -100,3 +100,32 @@ export type DashboardFilters = {
 };
 
 export type MoneyFormatter = (amount: number) => string;
+
+export type ImportReview = {
+	id: number;
+	account_id: number | null;
+	reference_number: string | null;
+	direction: "income" | "expense";
+	amount: number;
+	counterparty: string | null;
+	description: string | null;
+	occurred_at: string;
+	transaction_subtype: string | null;
+	status: "pending" | "imported" | "dismissed";
+	transaction_id: number | null;
+	received_at: string;
+	reviewed_at: string | null;
+	suggested_category_id: number | null;
+	suggestion_source: "none" | "rule" | "history";
+	suggestion_reason: string;
+	can_save_rule: boolean;
+};
+
+export type ImportUpload = { item: ImportReview; duplicate: boolean };
+
+export type MerchantRule = {
+	id: number;
+	merchant_name: string;
+	direction: "income" | "expense";
+	category_id: number;
+};

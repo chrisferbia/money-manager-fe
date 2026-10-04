@@ -11,12 +11,17 @@ import { Dashboard } from "./components/Dashboard";
 import { ReportsView } from "./components/ReportsView";
 import { SettingsView } from "./components/SettingsView";
 import { TransactionsView } from "./components/TransactionsView";
+import { ImportInbox } from "./components/ImportInbox";
 import { createMoneyFormatter, persistCurrency, readCurrency } from "./utils/currency";
 
 import { createNameMaps } from "./utils/maps";
 import type { DisplayCurrency, TransactionSort, View } from "./types";
 
-const viewIds: View[] = ["dashboard", "transactions", "accounts", "reports", "settings"];
+const viewIds: View[] = ["dashboard", "transactions", "imports", "accounts", "reports", "settings"];
+
+function isPrivateView(view: View) {
+	return view === "settings" || view === "imports";
+}
 
 function readViewFromHash(): View {
 	if (typeof window === "undefined") return "dashboard";
@@ -31,7 +36,7 @@ function App({
 }: { accountControl?: ReactNode; demoMode?: boolean; demoMonth?: string } = {}) {
 	const [view, setView] = useState<View>(() => {
 		const initial = readViewFromHash();
-		return demoMode && initial === "settings" ? "dashboard" : initial;
+		return demoMode && isPrivateView(initial) ? "dashboard" : initial;
 	});
 	const {
 		accounts,
@@ -101,7 +106,7 @@ function App({
 	useEffect(() => {
 		const handleLocationChange = () => {
 			const next = readViewFromHash();
-			setView(demoMode && next === "settings" ? "dashboard" : next);
+			setView(demoMode && isPrivateView(next) ? "dashboard" : next);
 			setError("");
 			setNotice("");
 		};
@@ -114,7 +119,7 @@ function App({
 	}, [demoMode, setError, setNotice]);
 
 	function selectView(next: View) {
-		if (demoMode && next === "settings") return;
+		if (demoMode && isPrivateView(next)) return;
 		setView(next);
 		if (typeof window !== "undefined" && window.location.hash !== `#${next}`)
 			window.location.hash = next;
@@ -241,6 +246,15 @@ function App({
 					onEdit={actions.editTransaction}
 					onDelete={actions.deleteTransaction}
 					onCancel={actions.resetEntry}
+				/>
+			)}
+			{view === "imports" && !demoMode && (
+				<ImportInbox
+					accounts={accounts}
+					categories={categories}
+					money={money}
+					onImported={refreshTransactions}
+					onAccounts={() => selectView("accounts")}
 				/>
 			)}
 			{view === "accounts" && (
