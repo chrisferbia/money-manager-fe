@@ -6,6 +6,7 @@ import { CryptoHoldingsPanel } from "../src/react-app/components/CryptoHoldingsP
 import { Dashboard } from "../src/react-app/components/Dashboard";
 import { createQueryClient } from "../src/react-app/api/queries";
 import { request } from "../src/react-app/api/client";
+import type { CryptoHolding } from "../src/react-app/types";
 
 vi.mock("../src/react-app/api/client", () => ({ request: vi.fn() }));
 const mockRequest = vi.mocked(request);
@@ -33,7 +34,13 @@ beforeEach(() => {
 		if (path === "/accounts/1/holdings/refresh-prices") {
 			price = "2000000000";
 			const holdings = await mockRequest("/accounts/1/holdings");
-			return { requested_count: 1, refreshed_count: 1, failed_coin_ids: [], holdings };
+			return {
+				requested_count: holdings.length ? 1 : 0,
+				refreshed_count: holdings.length ? 1 : 0,
+				failed_coin_ids: [],
+				holdings,
+				holdings_by_account: { "1": holdings },
+			};
 		}
 		if (path.startsWith("/crypto/search")) {
 			return [{ coin_id: "bitcoin", name: "Bitcoin", symbol: "BTC" }];
@@ -90,8 +97,8 @@ it("manually refreshes fresh prices and updates the holding without changing qua
 	const user = userEvent.setup();
 	const changed = showHoldings();
 	await screen.findByText("0.01 BTC", { exact: false });
-	await user.click(screen.getByRole("button", { name: "Refresh prices" }));
-	await screen.findByText("Latest available prices fetched. Account value updated.");
+	await user.click(screen.getByRole("button", { name: "Refresh all crypto prices" }));
+	await screen.findByText("Latest available prices fetched. All crypto account values updated.");
 	expect(mockRequest).toHaveBeenCalledWith("/accounts/1/holdings/refresh-prices", {
 		method: "POST",
 	});
@@ -107,12 +114,12 @@ it("keeps old prices on provider failure and allows another attempt", async () =
 	mockRequest.mockRejectedValueOnce(
 		new Error("Provider unavailable. Last known prices were kept."),
 	);
-	await user.click(screen.getByRole("button", { name: "Refresh prices" }));
+	await user.click(screen.getByRole("button", { name: "Refresh all crypto prices" }));
 	expect((await screen.findByRole("alert")).textContent).toContain("Last known prices were kept");
 	expect(screen.getByText("Rp 1.500.000.000", { exact: false })).toBeTruthy();
 	expect(changed).not.toHaveBeenCalled();
-	await user.click(screen.getByRole("button", { name: "Refresh prices" }));
-	await screen.findByText("Latest available prices fetched. Account value updated.");
+	await user.click(screen.getByRole("button", { name: "Refresh all crypto prices" }));
+	await screen.findByText("Latest available prices fetched. All crypto account values updated.");
 });
 
 it("warns about partially refreshed prices instead of reporting full success", async () => {
@@ -125,13 +132,14 @@ it("warns about partially refreshed prices instead of reporting full success", a
 		refreshed_count: 1,
 		failed_coin_ids: ["ethereum"],
 		holdings,
+		holdings_by_account: { "1": holdings },
 	});
-	await user.click(screen.getByRole("button", { name: "Refresh prices" }));
+	await user.click(screen.getByRole("button", { name: "Refresh all crypto prices" }));
 	expect((await screen.findByRole("alert")).textContent).toContain(
 		"Refreshed 1 of 2 prices. Could not refresh ethereum",
 	);
 	expect(
-		screen.queryByText("Latest available prices fetched. Account value updated."),
+		screen.queryByText("Latest available prices fetched. All crypto account values updated."),
 	).toBeNull();
 });
 
@@ -147,30 +155,83 @@ it("blocks duplicate refreshes while fetching", async () => {
 				complete = resolve;
 			}),
 	);
-	await user.dblClick(screen.getByRole("button", { name: "Refresh prices" }));
+	await user.dblClick(screen.getByRole("button", { name: "Refresh all crypto prices" }));
 	expect(
 		(screen.getByRole("button", { name: "Refreshing prices…" }) as HTMLButtonElement).disabled,
 	).toBe(true);
 	expect(
 		mockRequest.mock.calls.filter(([path]) => path.endsWith("/refresh-prices")),
 	).toHaveLength(1);
-	complete({ requested_count: 1, refreshed_count: 1, failed_coin_ids: [], holdings });
-	await screen.findByText("Latest available prices fetched. Account value updated.");
+	complete({
+		requested_count: 1,
+		refreshed_count: 1,
+		failed_coin_ids: [],
+		holdings,
+		holdings_by_account: { "1": holdings },
+	});
+	await screen.findByText("Latest available prices fetched. All crypto account values updated.");
 });
 
 it("hides manual refresh in the read-only demo", async () => {
 	showHoldings(true);
 	await screen.findByText("0.01 BTC", { exact: false });
-	expect(screen.queryByRole("button", { name: "Refresh prices" })).toBeNull();
+	expect(screen.queryByRole("button", { name: "Refresh all crypto prices" })).toBeNull();
 });
 
-it("disables refresh when there are no holdings", async () => {
+it("allows workspace refresh from an empty wallet and reports an empty workspace", async () => {
+	const user = userEvent.setup();
 	quantity = "";
 	showHoldings();
 	await screen.findByText(/No crypto added yet/);
 	expect(
-		(screen.getByRole("button", { name: "Refresh prices" }) as HTMLButtonElement).disabled,
-	).toBe(true);
+		(screen.getByRole("button", { name: "Refresh all crypto prices" }) as HTMLButtonElement)
+			.disabled,
+	).toBe(false);
+	await user.click(screen.getByRole("button", { name: "Refresh all crypto prices" }));
+	await screen.findByText("No crypto holdings in your workspace to refresh.");
+});
+
+it("updates cached holdings for other wallets without separate holding reads", async () => {
+	const user = userEvent.setup();
+	showHoldings();
+	await screen.findByText("0.01 BTC", { exact: false });
+	const holdings = client.getQueryData<CryptoHolding[]>(["crypto-holdings", 1])!;
+	const otherHoldings = [{ ...holdings[0], id: 2, account_id: 2, quantity: "0.02" }];
+	client.setQueryData(["crypto-holdings", 2], otherHoldings);
+	const updated = [{ ...otherHoldings[0], price_idr: "2000000000", value_idr: 40_000_000 }];
+	mockRequest.mockResolvedValueOnce({
+		requested_count: 1,
+		refreshed_count: 1,
+		failed_coin_ids: [],
+		holdings,
+		holdings_by_account: { "1": holdings, "2": updated },
+	});
+	mockRequest.mockClear();
+	await user.click(screen.getByRole("button", { name: "Refresh all crypto prices" }));
+	await screen.findByText("Latest available prices fetched. All crypto account values updated.");
+	expect(client.getQueryData(["crypto-holdings", 2])).toEqual(updated);
+	expect(mockRequest.mock.calls.map(([path]) => path)).toEqual([
+		"/accounts/1/holdings/refresh-prices",
+	]);
+});
+
+it("reports failed coins from other wallets using their symbols", async () => {
+	const user = userEvent.setup();
+	showHoldings();
+	await screen.findByText("0.01 BTC", { exact: false });
+	const holdings = client.getQueryData<CryptoHolding[]>(["crypto-holdings", 1])!;
+	mockRequest.mockResolvedValueOnce({
+		requested_count: 2,
+		refreshed_count: 1,
+		failed_coin_ids: ["ethereum"],
+		holdings,
+		holdings_by_account: {
+			"1": holdings,
+			"2": [{ ...holdings[0], id: 2, account_id: 2, coin_id: "ethereum", symbol: "ETH" }],
+		},
+	});
+	await user.click(screen.getByRole("button", { name: "Refresh all crypto prices" }));
+	expect((await screen.findByRole("alert")).textContent).toContain("Could not refresh ETH");
 });
 
 afterEach(() => {

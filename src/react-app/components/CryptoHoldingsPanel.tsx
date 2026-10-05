@@ -46,29 +46,40 @@ export function CryptoHoldingsPanel({ account, onHoldingsChange, readOnly = fals
 	const busy = saving || refreshingPrices;
 
 	async function refreshMarketPrices() {
-		if (readOnly || refreshRunning.current || saving || !holdings.data?.length) return;
+		if (readOnly || refreshRunning.current || saving || holdings.isFetching) return;
 		refreshRunning.current = true;
 		setRefreshingPrices(true);
 		setError("");
 		setNotice("");
 		try {
+			await client.cancelQueries({ queryKey: ["crypto-holdings"] });
 			const result = await request<CryptoPriceRefresh>(
 				`/accounts/${account.id}/holdings/refresh-prices`,
 				{ method: "POST" },
 			);
-			client.setQueryData(["crypto-holdings", account.id], result.holdings);
+			await client.invalidateQueries({
+				queryKey: ["crypto-holdings"],
+				refetchType: "none",
+			});
+			for (const [accountId, updatedHoldings] of Object.entries(result.holdings_by_account)) {
+				client.setQueryData(["crypto-holdings", Number(accountId)], updatedHoldings);
+			}
 			await onHoldingsChange();
 			if (result.failed_coin_ids.length) {
+				const allHoldings = Object.values(result.holdings_by_account).flat();
 				const names = result.failed_coin_ids.map(
 					(coinId) =>
-						result.holdings.find((holding) => holding.coin_id === coinId)?.symbol ??
-						coinId,
+						allHoldings.find((holding) => holding.coin_id === coinId)?.symbol ?? coinId,
 				);
 				setError(
 					`Refreshed ${result.refreshed_count} of ${result.requested_count} prices. Could not refresh ${names.join(", ")}; last known prices were kept.`,
 				);
 			} else {
-				setNotice("Latest available prices fetched. Account value updated.");
+				setNotice(
+					result.requested_count
+						? "Latest available prices fetched. All crypto account values updated."
+						: "No crypto holdings in your workspace to refresh.",
+				);
 			}
 		} catch (reason) {
 			setError(
@@ -191,10 +202,11 @@ export function CryptoHoldingsPanel({ account, onHoldingsChange, readOnly = fals
 						<button
 							type="button"
 							className="cancel-button crypto-refresh-button"
-							disabled={busy || holdings.isFetching || !holdings.data?.length}
+							disabled={busy || holdings.isFetching}
+							title="Refresh prices for every coin held across your workspace"
 							onClick={() => void refreshMarketPrices()}
 						>
-							{refreshingPrices ? "Refreshing prices…" : "Refresh prices"}
+							{refreshingPrices ? "Refreshing prices…" : "Refresh all crypto prices"}
 						</button>
 					)}
 				</div>

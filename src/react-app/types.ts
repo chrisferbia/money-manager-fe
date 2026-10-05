@@ -32,6 +32,7 @@ export type CryptoPriceRefresh = {
 	refreshed_count: number;
 	failed_coin_ids: string[];
 	holdings: CryptoHolding[];
+	holdings_by_account: Record<string, CryptoHolding[]>;
 };
 
 export type Category = {
