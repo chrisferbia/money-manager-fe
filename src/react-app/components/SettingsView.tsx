@@ -9,6 +9,7 @@ import {
 import type { Category, CategoryDraft, DisplayCurrency, MoneyFormatter } from "../types";
 import { categoryNameMaxLength } from "../utils/constants";
 import { EmailFormatTester } from "./EmailFormatTester";
+import { CryptoPriceSettings } from "./CryptoPriceSettings";
 
 type SettingsViewProps = {
 	categories: Category[];
@@ -135,6 +136,7 @@ export function SettingsView({
 					</span>
 				</div>
 			</section>
+			<CryptoPriceSettings />
 			<EmailFormatTester />
 			<section className="settings-section">
 				<div className="section-heading settings-heading category-section-heading">

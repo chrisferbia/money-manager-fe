@@ -26,6 +26,14 @@ export type CryptoHolding = CryptoCoin & {
 	price_status: "fresh" | "stale" | "unavailable";
 };
 
+export type CryptoPriceSettings = { expiry_minutes: number };
+export type CryptoPriceRefresh = {
+	requested_count: number;
+	refreshed_count: number;
+	failed_coin_ids: string[];
+	holdings: CryptoHolding[];
+};
+
 export type Category = {
 	id: number;
 	name: string;

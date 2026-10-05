@@ -1,7 +1,7 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { request } from "../api/client";
-import type { Account, CryptoCoin, CryptoHolding } from "../types";
+import type { Account, CryptoCoin, CryptoHolding, CryptoPriceRefresh } from "../types";
 import { errorMessage } from "../utils/errors";
 
 const idr = new Intl.NumberFormat("id-ID", {
@@ -25,11 +25,13 @@ type Props = {
 
 export function CryptoHoldingsPanel({ account, onHoldingsChange, readOnly = false }: Props) {
 	const client = useQueryClient();
+	const [refreshingPrices, setRefreshingPrices] = useState(false);
+	const refreshRunning = useRef(false);
 	const holdings = useQuery({
 		queryKey: ["crypto-holdings", account.id],
 		queryFn: ({ signal }) =>
 			request<CryptoHolding[]>(`/accounts/${account.id}/holdings`, { signal }),
-		refetchInterval: 60_000,
+		refetchInterval: refreshingPrices ? false : 60_000,
 	});
 	const [search, setSearch] = useState("");
 	const [results, setResults] = useState<CryptoCoin[]>([]);
@@ -41,6 +43,45 @@ export function CryptoHoldingsPanel({ account, onHoldingsChange, readOnly = fals
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState("");
 	const [notice, setNotice] = useState("");
+	const busy = saving || refreshingPrices;
+
+	async function refreshMarketPrices() {
+		if (readOnly || refreshRunning.current || saving || !holdings.data?.length) return;
+		refreshRunning.current = true;
+		setRefreshingPrices(true);
+		setError("");
+		setNotice("");
+		try {
+			const result = await request<CryptoPriceRefresh>(
+				`/accounts/${account.id}/holdings/refresh-prices`,
+				{ method: "POST" },
+			);
+			client.setQueryData(["crypto-holdings", account.id], result.holdings);
+			await onHoldingsChange();
+			if (result.failed_coin_ids.length) {
+				const names = result.failed_coin_ids.map(
+					(coinId) =>
+						result.holdings.find((holding) => holding.coin_id === coinId)?.symbol ??
+						coinId,
+				);
+				setError(
+					`Refreshed ${result.refreshed_count} of ${result.requested_count} prices. Could not refresh ${names.join(", ")}; last known prices were kept.`,
+				);
+			} else {
+				setNotice("Latest available prices fetched. Account value updated.");
+			}
+		} catch (reason) {
+			setError(
+				errorMessage(
+					reason,
+					"Could not refresh crypto prices. Last known prices were kept.",
+				),
+			);
+		} finally {
+			refreshRunning.current = false;
+			setRefreshingPrices(false);
+		}
+	}
 
 	async function refresh() {
 		await Promise.all([
@@ -140,11 +181,23 @@ export function CryptoHoldingsPanel({ account, onHoldingsChange, readOnly = fals
 					<h3>{account.name}</h3>
 					<p className="muted">Market value in IDR · no cash balance</p>
 				</div>
-				<strong className="crypto-panel-total">
-					{account.balance === null
-						? "Price unavailable"
-						: idr.format(account.balance ?? 0)}
-				</strong>
+				<div className="crypto-panel-summary">
+					<strong className="crypto-panel-total">
+						{account.balance === null
+							? "Price unavailable"
+							: idr.format(account.balance ?? 0)}
+					</strong>
+					{!readOnly && (
+						<button
+							type="button"
+							className="cancel-button crypto-refresh-button"
+							disabled={busy || holdings.isFetching || !holdings.data?.length}
+							onClick={() => void refreshMarketPrices()}
+						>
+							{refreshingPrices ? "Refreshing prices…" : "Refresh prices"}
+						</button>
+					)}
+				</div>
 			</div>
 			{error && (
 				<p role="alert" className="api-error">
@@ -200,11 +253,7 @@ export function CryptoHoldingsPanel({ account, onHoldingsChange, readOnly = fals
 											}
 										/>
 									</label>
-									<button
-										type="submit"
-										className="submit-button"
-										disabled={saving}
-									>
+									<button type="submit" className="submit-button" disabled={busy}>
 										Save quantity
 									</button>
 									<button
@@ -220,6 +269,7 @@ export function CryptoHoldingsPanel({ account, onHoldingsChange, readOnly = fals
 									<button
 										type="button"
 										className="crypto-edit-button"
+										disabled={busy}
 										onClick={() => {
 											setEditingId(holding.id);
 											setEditingQuantity(holding.quantity);
@@ -230,7 +280,7 @@ export function CryptoHoldingsPanel({ account, onHoldingsChange, readOnly = fals
 									<button
 										type="button"
 										className="crypto-remove-button"
-										disabled={saving}
+										disabled={busy}
 										onClick={() => void removeHolding(holding)}
 									>
 										Remove
@@ -301,7 +351,7 @@ export function CryptoHoldingsPanel({ account, onHoldingsChange, readOnly = fals
 									required
 								/>
 							</label>
-							<button className="submit-button" type="submit" disabled={saving}>
+							<button className="submit-button" type="submit" disabled={busy}>
 								{saving ? "Adding..." : "Add holding"}
 							</button>
 						</form>
