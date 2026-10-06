@@ -123,7 +123,7 @@ function TransactionRow({
 			: sourceAccountLabel;
 	const categoryLabel =
 		transaction.type === "transfer"
-			? "-"
+			? "Transfer"
 			: transaction.category_id
 				? (categoryNames.get(transaction.category_id) ?? "Category")
 				: typeLabel;
@@ -132,43 +132,52 @@ function TransactionRow({
 	const sign = transaction.type === "income" ? "+" : transaction.type === "expense" ? "-" : "";
 
 	return (
-		<div
+		<button
+			type="button"
 			className={`transaction-row ${transaction.type}`}
-			role={readOnly ? undefined : "button"}
-			tabIndex={readOnly ? undefined : 0}
-			onClick={readOnly ? undefined : (event) => onEdit(transaction, event.currentTarget)}
-			onKeyDown={
-				readOnly
-					? undefined
-					: (event) => {
-							if (event.key === "Enter" || event.key === " ") {
-								event.preventDefault();
-								onEdit(transaction, event.currentTarget);
-							}
-						}
-			}
-			aria-label={
-				readOnly
-					? undefined
-					: `Open ${typeLabel.toLowerCase()} transaction for ${categoryLabel}`
-			}
+			disabled={readOnly}
+			onClick={(event) => onEdit(transaction, event.currentTarget)}
 		>
-			<span className="transaction-value transaction-category" title={categoryLabel}>
-				{categoryLabel}
-			</span>
-			<span className="transaction-value transaction-description" title={description}>
-				{description}
+			<span className="transaction-field transaction-category" title={categoryLabel}>
+				<span className="transaction-field-label">
+					{transaction.type === "transfer" ? "Type:" : "Cat:"}
+				</span>
+				<span className="transaction-value">{categoryLabel}</span>
 			</span>
 			<strong className={`transaction-value transaction-amount ${transaction.type}`}>
 				{sign}
 				{money(transaction.amount)}
 			</strong>
-			<span className="transaction-value transaction-account" title={accountLabel}>
-				{accountLabel}
+			<span className="transaction-compact-meta">
+				<span
+					className="transaction-field transaction-description"
+					title={`Description: ${description}`}
+				>
+					<span className="transaction-field-label">Desc:</span>
+					<span className="transaction-value">{description}</span>
+				</span>
+				<span className="transaction-field transaction-account" title={accountLabel}>
+					<span className="transaction-field-label">
+						{transaction.type === "transfer" ? "From:" : "Acc:"}
+					</span>
+					<span className="transaction-value">{sourceAccountLabel}</span>
+				</span>
+				<span
+					className="transaction-field transaction-counterparty"
+					title={transaction.type === "transfer" ? destinationAccountLabel : counterparty}
+				>
+					<span className="transaction-field-label">
+						{transaction.type === "income"
+							? "From:"
+							: transaction.type === "expense"
+								? "PayTo:"
+								: "To:"}
+					</span>
+					<span className="transaction-value">
+						{transaction.type === "transfer" ? destinationAccountLabel : counterparty}
+					</span>
+				</span>
 			</span>
-			<span className="transaction-value transaction-counterparty" title={counterparty}>
-				{counterparty}
-			</span>
-		</div>
+		</button>
 	);
 }
