@@ -3105,6 +3105,115 @@ footer {
 }
 
 /* Shared two-line transaction layout on desktop and mobile. */
+.receivables-panel {
+	margin-top: 24px;
+}
+.receivables-panel .panel-heading {
+	flex-wrap: wrap;
+	gap: 16px;
+}
+.receivables-panel label {
+	max-width: 100%;
+}
+.receivables-total {
+	display: flex;
+	justify-content: space-between;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+.receivables-total strong {
+	font:
+		600 22px Georgia,
+		serif;
+}
+.receivables-settled {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 12px 0;
+}
+.receivables-settled input {
+	width: auto;
+	margin: 0;
+}
+.receivables-table {
+	overflow-x: auto;
+}
+.receivables-table table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 12px;
+}
+.receivables-table th,
+.receivables-table td {
+	padding: 12px 8px;
+	border-bottom: 1px solid #deded6;
+	text-align: right;
+	white-space: nowrap;
+}
+.receivables-table th:first-child {
+	text-align: left;
+	white-space: normal;
+	overflow-wrap: anywhere;
+	min-width: 90px;
+}
+.receivables-table small {
+	display: block;
+	color: #68756f;
+}
+@media (max-width: 700px) {
+	.receivables-table thead {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+	}
+	.receivables-table table,
+	.receivables-table tbody {
+		display: block;
+	}
+	.receivables-table tr {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		gap: 6px 12px;
+		padding: 12px 0;
+		border-bottom: 1px solid #deded6;
+	}
+	.receivables-table th,
+	.receivables-table td {
+		min-width: 0;
+		padding: 0;
+		border: 0;
+		white-space: normal;
+		overflow-wrap: anywhere;
+	}
+	.receivables-table th:first-child {
+		min-width: 0;
+		grid-column: 1;
+		grid-row: 1;
+		align-self: center;
+	}
+	.receivables-table td:nth-child(2) {
+		grid-column: 1;
+		grid-row: 2;
+		text-align: left;
+	}
+	.receivables-table td:nth-child(3) {
+		grid-column: 2;
+		grid-row: 2;
+	}
+	.receivables-table td:nth-child(4) {
+		grid-column: 2;
+		grid-row: 1;
+	}
+	.receivables-table td::before {
+		content: attr(data-label);
+		display: block;
+		color: #68756f;
+		font-size: 11px;
+	}
+}
 .transaction-row {
 	width: 100%;
 	text-align: left;

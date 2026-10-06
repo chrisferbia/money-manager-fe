@@ -76,7 +76,7 @@ export async function request<T>(path: string, options?: RequestInit): Promise<T
 	if (isDemoRequest && method !== "GET") throw new Error("Demo data is read-only.");
 	if (
 		isDemoRequest &&
-		!/^\/(?:accounts(?:\?[^/]*)?|accounts\/\d+\/holdings|categories|transactions\?[^/]*|reports\/(?:expenses-by-category|savings-balance-history)\?[^/]*)$/.test(
+		!/^\/(?:accounts(?:\?[^/]*)?|accounts\/\d+\/holdings|categories|transactions\?[^/]*|reports\/(?:expenses-by-category|savings-balance-history|receivables)\?[^/]*)$/.test(
 			path,
 		) &&
 		path !== "/metadata"

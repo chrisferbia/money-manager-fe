@@ -1,11 +1,13 @@
 import { useState } from "react";
-import type { Category, MoneyFormatter, ReportItem, SavingsHistoryReport } from "../types";
+import type { Account, Category, MoneyFormatter, ReportItem, SavingsHistoryReport } from "../types";
+import { ReceivablesReport } from "./ReceivablesReport";
 import { shiftMonth } from "../utils/period";
 import { SavingsTrendChart } from "./SavingsTrendChart";
 
 type ComparisonMode = "lastMonth" | "budget";
 
 type ReportsViewProps = {
+	accounts?: Account[];
 	report: ReportItem[];
 	previousReport: ReportItem[];
 	reportMonth: string;
@@ -30,6 +32,7 @@ function monthLabel(month: string) {
 }
 
 export function ReportsView({
+	accounts = [],
 	report,
 	previousReport,
 	reportMonth,
@@ -255,6 +258,7 @@ export function ReportsView({
 				)}
 			</section>
 			<SavingsTrendChart report={savingsHistory} money={money} />
+			<ReceivablesReport accounts={accounts} money={money} />
 		</>
 	);
 }

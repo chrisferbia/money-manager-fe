@@ -271,6 +271,7 @@ function App({
 			)}
 			{view === "reports" && (
 				<ReportsView
+					accounts={accounts}
 					report={report}
 					previousReport={previousReport}
 					reportMonth={reportMonth}
