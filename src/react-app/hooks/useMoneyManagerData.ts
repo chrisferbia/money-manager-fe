@@ -22,7 +22,11 @@ export function useMoneyManagerData(view: View, initialMonth?: string) {
 	}));
 	const [actionError, setActionError] = useState("");
 	const [dismissedFetchError, setDismissedFetchError] = useState<Error | undefined>(undefined);
-	const needsAccounts = view === "dashboard" || view === "transactions" || view === "accounts";
+	const needsAccounts =
+		view === "dashboard" ||
+		view === "transactions" ||
+		view === "accounts" ||
+		view === "reports";
 	const needsCategories =
 		view === "dashboard" ||
 		view === "transactions" ||
@@ -60,8 +64,7 @@ export function useMoneyManagerData(view: View, initialMonth?: string) {
 	// This shared hook stays mounted across pages. Recheck freshness on navigation;
 	// fetchQuery reuses fresh cache entries and deduplicates in-flight requests.
 	useEffect(() => {
-		if (view === "dashboard" || view === "transactions" || view === "accounts")
-			void client.fetchQuery(accountQuery()).catch(() => {});
+		if (needsAccounts) void client.fetchQuery(accountQuery()).catch(() => {});
 		if (
 			view === "dashboard" ||
 			view === "transactions" ||
@@ -76,7 +79,15 @@ export function useMoneyManagerData(view: View, initialMonth?: string) {
 		if (needsPreviousReport)
 			void client.fetchQuery(reportQuery(previousReportFilters)).catch(() => {});
 		if (view === "reports") void client.fetchQuery(savingsHistoryQuery()).catch(() => {});
-	}, [client, filters, needsPreviousReport, previousReportFilters, transactionFilters, view]);
+	}, [
+		client,
+		filters,
+		needsAccounts,
+		needsPreviousReport,
+		previousReportFilters,
+		transactionFilters,
+		view,
+	]);
 	const active = [
 		...(needsAccounts ? [accounts] : []),
 		...(needsCategories ? [categories] : []),

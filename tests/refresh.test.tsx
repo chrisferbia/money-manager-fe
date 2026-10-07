@@ -59,6 +59,18 @@ async function start() {
 	await screen.findByText("Current balances");
 }
 
+it("loads account options when Reports opens directly with an empty cache", async () => {
+	window.location.hash = "reports";
+	render(
+		<QueryClientProvider client={client}>
+			<App />
+		</QueryClientProvider>,
+	);
+	await screen.findByRole("option", { name: "Wallet" });
+	expect(screen.getByLabelText("Receivables account")).toBeTruthy();
+	expect(count("/accounts")).toBe(1);
+});
+
 it("reuses fresh data when switching Overview and Transactions", async () => {
 	await start();
 	const before = mockRequest.mock.calls.length;
